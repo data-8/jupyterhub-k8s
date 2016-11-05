@@ -1,3 +1,5 @@
+# JuptyerHub data8 with kubespawner
+
 # Configuration file for Jupyter Hub
 c = get_config()
 
@@ -16,6 +18,9 @@ c.JupyterHub.proxy_cmd = '/opt/conda/bin/nchp'
 
 # Configure the authenticator
 c.JupyterHub.authenticator_class = 'docker_oauth.DockerOAuthenticator'
+
+print os.environ['OAUTH_CALLBACK_URL']
+
 c.DockerOAuthenticator.oauth_callback_url = os.environ['OAUTH_CALLBACK_URL']
 c.DockerOAuthenticator.create_system_users = True
 c.Authenticator.admin_users = admin = set()
@@ -23,16 +28,51 @@ c.Authenticator.admin_users = admin = set()
 c.GoogleOAuthenticator.hosted_domain = 'berkeley.edu'
 c.GoogleOAuthenticator.login_service = 'UC Berkeley'
 
+### KUBESPAWNER STUFF
 # Configure the spawner
-c.JupyterHub.spawner_class = 'systemuserspawner.SystemUserSpawner'
-c.SystemUserSpawner.container_image = 'data8/systemuser:nodrive'
-c.DockerSpawner.tls_cert = os.environ['DOCKER_TLS_CERT']
-c.DockerSpawner.tls_key = os.environ['DOCKER_TLS_KEY']
-c.DockerSpawner.remove_containers = True
+c.JupyterHub.spawner_class = 'kubespawner.KubeSpawner'
+
+c.KubeSpawner.kube_namespace = os.environ.get('POD_NAMESPACE', 'default')
+c.KubeSpawner.kube_api_endpoint = 'https://{host}:{port}'.format(
+    host=os.environ['KUBERNETES_SERVICE_HOST'],
+    port=os.environ['KUBERNETES_SERVICE_PORT']
+)
+
+# Don't try to cleanup servers on exit - since in general for k8s, we want
+# the hub to be able to restart without losing user containers
+c.JupyterHub.cleanup_servers = False
+
+# First pulls can be really slow, so let's give it a big timeout
+c.KubeSpawner.start_timeout = 60 * 5
+
+# Our simplest user image! Optimized to just... start, and be small!
+c.KubeSpawner.singleuser_image_spec = 'yuvipanda/simple-singleuser:v1'
+
+# The spawned containers need to be able to talk to the hub, ok through the proxy!
+c.KubeSpawner.hub_ip_connect = '{host}:{port}'.format(
+    host=os.environ['HUB_PROXY_SERVICE_HOST'],
+    port=os.environ['HUB_PROXY_SERVICE_PORT']
+)
+
+### END KUBESPAWNER STUFF
+
+
+
+###
+# c.SystemUserSpawner.container_image = 'data8/systemuser:nodrive'
+# c.DockerSpawner.tls_cert = os.environ['DOCKER_TLS_CERT']
+# c.DockerSpawner.tls_key = os.environ['DOCKER_TLS_KEY']
+# c.DockerSpawner.remove_containers = True
+###
+
 #c.DockerSpawner.read_only_volumes = {'/home/shared':'/home/shared'}
-c.DockerSpawner.volumes = {'/home/shared':'/home/shared'}
-c.DockerSpawner.extra_host_config = {'mem_limit': '2g'}
-c.DockerSpawner.container_ip = "0.0.0.0"
+
+###
+# c.DockerSpawner.volumes = {'/home/shared':'/home/shared'}
+# c.DockerSpawner.extra_host_config = {'mem_limit': '2g'}
+# c.DockerSpawner.container_ip = "0.0.0.0"
+###
+
 #c.Spawner.start_timeout = 300
 #c.Spawner.http_timeout = 150
 
@@ -42,7 +82,10 @@ c.DockerSpawner.container_ip = "0.0.0.0"
 # we explicitly tell the spawned containers to connect to the proper IP address.
 c.JupyterHub.proxy_api_ip = '0.0.0.0'
 c.JupyterHub.hub_ip = '0.0.0.0'
-c.DockerSpawner.hub_ip_connect = os.environ['HUB_IP']
+
+###
+# c.DockerSpawner.hub_ip_connect = os.environ['HUB_IP']
+###
 
 # Add users to the admin list, the whitelist, and also record their user ids
 
@@ -53,3 +96,4 @@ with open('/srv/oauthenticator/userlist') as f:
         #whitelist.add(name)
         if len(parts) > 1 and parts[1] == 'admin':
             admin.add(parts[0])
+
