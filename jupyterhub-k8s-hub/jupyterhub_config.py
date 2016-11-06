@@ -22,7 +22,12 @@ c.JupyterHub.ip = '0.0.0.0'
 # Configure the authenticator
 c.JupyterHub.authenticator_class = 'oauthenticator.GoogleOAuthenticator'
 
+c.GoogleOAuthenticator.client_id = "92948014362-c7jc8k20co1e4eqmg8095818htadijat.apps.googleusercontent.com"
+c.GoogleOAuthenticator.client_secret = "BabUWSqHd4ZekBqiaur4S1cm"
+
+print  os.environ['OAUTH_CALLBACK_URL']
 c.GoogleOAuthenticator.oauth_callback_url = os.environ['OAUTH_CALLBACK_URL']
+
 c.GoogleOAuthenticator.hosted_domain = 'berkeley.edu'
 c.GoogleOAuthenticator.login_service = 'UC Berkeley'
 

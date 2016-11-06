@@ -43,6 +43,8 @@ spec:
               configMapKeyRef:
                 name: cull-config
                 key: auth.jhub-token.cull
+          - name: OAUTH_CALLBACK_URL
+            value: http://${HUB_PROXY_SERVICE_HOST}:${HUB_PROXY_SERVICE_PORT}/hub/oauth_callback
           ports:
             - containerPort: 8000
               name: hub-proxy-port
