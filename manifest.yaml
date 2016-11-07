@@ -32,7 +32,7 @@ spec:
     spec:
       containers:
       - name: hub-proxy-container
-        image: data8/jupyterhub-k8s-hub:master
+        image: data8/jupyterhub-k8s-hub:data8_jupyterhubv2
         env:
         - name: POD_NAMESPACE
           valueFrom:
@@ -44,7 +44,7 @@ spec:
               name: cull-config
               key: auth.jhub-token.cull
         - name: OAUTH_CALLBACK_URL
-          value: http://${HUB_PROXY_SERVICE_HOST}:${HUB_PROXY_SERVICE_PORT}/hub/oauth_callback
+          value: http://derrick-jhub.calblueprint.org/hub/oauth_callback
         ports:
           - containerPort: 8000
             name: hub-proxy-port

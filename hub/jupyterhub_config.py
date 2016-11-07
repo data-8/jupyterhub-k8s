@@ -1,11 +1,15 @@
-# JuptyerHub data8 with kubespawner
+import os
+import sys
 
 # Configuration file for Jupyter Hub
 c = get_config()
 
-import os
-import sys
 # sys.path.insert(0, '/srv/oauthenticator')
+
+# Use the nginx based proxy, rather than the nodejs one
+c.JupyterHub.proxy_cmd = '/opt/conda/bin/nchp'
+# Proxy and hub is running on the same machine
+c.JupyterHub.ip = '0.0.0.0'
 
 # Base configuration
 c.JupyterHub.log_level = "INFO"
@@ -13,11 +17,6 @@ c.JupyterHub.db_url = 'sqlite:////srv/jupyterhub/jupyterhub.sqlite'
 c.JupyterHub.admin_access = True
 c.JupyterHub.confirm_no_ssl = True
 c.JupyterHub.proxy_check_interval = 30
-# Use the nginx based proxy, rather than the nodejs one
-c.JupyterHub.proxy_cmd = '/usr/local/bin/nchp'
-
-# Proxy and hub is running on the same machine
-c.JupyterHub.ip = '0.0.0.0'
 
 # Configure the authenticator
 c.JupyterHub.authenticator_class = 'oauthenticator.GoogleOAuthenticator'
@@ -34,10 +33,6 @@ c.GoogleOAuthenticator.login_service = 'UC Berkeley'
 # c.DockerOAuthenticator.oauth_callback_url = os.environ['OAUTH_CALLBACK_URL']
 # c.DockerOAuthenticator.create_system_users = True
 
-# TODO: Look into what these do
-c.Authenticator.whitelist = whitelist = set()
-c.Authenticator.admin_users = {'cull', 'derrickmar1215'}
-
 ### KUBESPAWNER STUFF
 # Configure the spawner
 c.JupyterHub.spawner_class = 'kubespawner.KubeSpawner'
@@ -50,9 +45,10 @@ c.KubeSpawner.kube_api_endpoint = 'https://{host}:{port}'.format(
 
 # Don't try to cleanup servers on exit - since in general for k8s, we want
 # the hub to be able to restart without losing user containers
-c.JupyterHub.cleanup_servers = False
+# c.JupyterHub.cleanup_servers = False
 
 # First pulls can be really slow, so let's give it a big timeout
+c.KubeSpawner.kube_ca_path = False
 c.KubeSpawner.start_timeout = 60 * 5
 
 c.KubeSpawner.singleuser_image_spec = 'data8/systemuser'
@@ -62,8 +58,11 @@ c.KubeSpawner.hub_ip_connect = '{host}:{port}'.format(
     host=os.environ['HUB_PROXY_SERVICE_HOST'],
     port=os.environ['HUB_PROXY_SERVICE_PORT']
 )
-
 ### END KUBESPAWNER STUFF
+
+# TODO: Look into what these do
+c.Authenticator.whitelist = whitelist = set()
+c.Authenticator.admin_users = {'cull', 'derrickmar1215'}
 
 ###
 # c.SystemUserSpawner.container_image = 'data8/systemuser:nodrive'

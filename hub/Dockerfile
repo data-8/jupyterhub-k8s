@@ -33,8 +33,11 @@ RUN pip install statsd
 
 # For nginx-chp
 RUN apt-get -q update
-RUN apt-get install -y --no-install-recommends ca-certificates nginx-extras lua-cjson
-RUN pip --no-cache-dir install git+https://github.com/yuvipanda/jupyterhub-nginx-chp.git@3840564
+
+#RUN apt-get install -y --no-install-recommends ca-certificates nginx-extras lua-cjson
+RUN apt-get install -y --no-install-recommends python3 python3-pip ca-certificates git nginx-extras lua-cjson
+
+RUN pip --no-cache-dir install git+https://github.com/yuvipanda/jupyterhub-nginx-chp.git
 
 # set working directory to the jupyterhub directory
 WORKDIR /srv/jupyterhub
