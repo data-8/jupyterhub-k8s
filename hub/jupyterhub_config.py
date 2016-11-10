@@ -33,27 +33,20 @@ c.GoogleOAuthenticator.login_service = 'UC Berkeley'
 # Configure the spawner
 c.JupyterHub.spawner_class = 'kubespawner.KubeSpawner'
 
-c.KubeSpawner.kube_namespace = os.environ.get('POD_NAMESPACE', 'default')
-c.KubeSpawner.kube_api_endpoint = 'https://{host}:{port}'.format(
-    host=os.environ['KUBERNETES_SERVICE_HOST'],
-    port=os.environ['KUBERNETES_SERVICE_PORT']
-)
+c.KubeSpawner.namespace = os.environ.get('POD_NAMESPACE', 'default')
 
 # Don't try to cleanup servers on exit - since in general for k8s, we want
 # the hub to be able to restart without losing user containers
 # c.JupyterHub.cleanup_servers = False
 
 # First pulls can be really slow, so let's give it a big timeout
-c.KubeSpawner.kube_ca_path = False
-c.KubeSpawner.start_timeout = 60 * 5
+c.KubeSpawner.start_timeout = 60 * 5  # Up to 5 minutes, first pulls can be really slow
 
 c.KubeSpawner.singleuser_image_spec = 'data8/jupyterhub-k8s-user:data8_jupyterhubv2'
 
 # The spawned containers need to be able to talk to the hub, ok through the proxy!
-c.KubeSpawner.hub_ip_connect = '{host}:{port}'.format(
-    host=os.environ['HUB_PROXY_SERVICE_HOST'],
-    port=os.environ['HUB_PROXY_SERVICE_PORT']
-)
+c.KubeSpawner.hub_connect_ip = os.environ['HUB_PROXY_SERVICE_HOST']
+c.KubeSpawner.hub_connect_port = int(os.environ['HUB_PROXY_SERVICE_PORT'])
 
 # Allow culler to cull juptyerhub
 c.JupyterHub.api_tokens = {
