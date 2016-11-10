@@ -23,8 +23,8 @@ c.JupyterHub.authenticator_class = 'oauthenticator.GoogleOAuthenticator'
 c.JupyterHub.extra_log_file = '/var/log/jupyterhub.log'
 c.JupyterHub.log_level = 'DEBUG'
 
-c.GoogleOAuthenticator.client_id = "92948014362-c7jc8k20co1e4eqmg8095818htadijat.apps.googleusercontent.com"
-c.GoogleOAuthenticator.client_secret = "BabUWSqHd4ZekBqiaur4S1cm"
+c.GoogleOAuthenticator.client_id = os.environ['GOOGLE_OAUTH_CLIENT_ID']
+c.GoogleOAuthenticator.client_secret = os.environ['GOOGLE_OAUTH_CLIENT_SECRET']
 c.GoogleOAuthenticator.oauth_callback_url = os.environ['OAUTH_CALLBACK_URL']
 
 c.GoogleOAuthenticator.hosted_domain = 'berkeley.edu'

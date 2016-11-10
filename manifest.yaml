@@ -1,10 +1,13 @@
 kind: ConfigMap
 apiVersion: v1
 metadata:
-  name: cull-config
+  name: config
+# TODO: Make secrets more secure
 data:
   # Used to authenticate the culler to the hub. This string was generated with `openssl rand -hex 32`.
   auth.jhub-token.cull: 13fdff1305cd883e49223908186a63294922dadb59b5d1122473041f160c4b03
+  oauth.client-id.google: 92948014362-c7jc8k20co1e4eqmg8095818htadijat.apps.googleusercontent.com
+  oauth.client-secret.google: BabUWSqHd4ZekBqiaur4S1cm
 ---
 apiVersion: v1
 kind: Service
@@ -41,8 +44,18 @@ spec:
         - name: CULL_JHUB_TOKEN
           valueFrom:
             configMapKeyRef:
-              name: cull-config
+              name: config
               key: auth.jhub-token.cull
+        - name: GOOGLE_OAUTH_CLIENT_ID
+          valueFrom:
+            configMapKeyRef:
+              name: config
+              key: oauth.client-id.google
+        - name: GOOGLE_OAUTH_CLIENT_SECRET
+          valueFrom:
+            configMapKeyRef:
+              name: config
+              key: oauth.client-secret.google
         - name: OAUTH_CALLBACK_URL
           value: http://derrick-jhub.calblueprint.org/hub/oauth_callback
         ports:
@@ -71,5 +84,5 @@ spec:
           - name: JPY_API_TOKEN
             valueFrom:
               configMapKeyRef:
-                name: cull-config
+                name: config
                 key: auth.jhub-token.cull
