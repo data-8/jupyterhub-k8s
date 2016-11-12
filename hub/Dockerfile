@@ -8,8 +8,8 @@ RUN pip install --upgrade pip
 # Install dockerspawner and oauthenticator
 RUN pip install git+git://github.com/docker/docker-py.git@1.8.1
 
-# We're replacing dockerspanwer with kubespawner
-RUN pip --no-cache-dir install git+https://github.com/jupyterhub/kubespawner.git
+RUN pip3 --no-cache-dir install git+https://github.com/data-8/kubespawner.git@volumes
+RUN pip3 --no-cache-dir install git+https://github.com/yuvipanda/jupyterhub-nginx-chp.git
 
 # is this line needed anymore??
 RUN /opt/conda/bin/pip install oauthenticator==0.4.*
@@ -35,8 +35,6 @@ RUN apt-get -q update
 
 #RUN apt-get install -y --no-install-recommends ca-certificates nginx-extras lua-cjson
 RUN apt-get install -y --no-install-recommends python3 python3-pip ca-certificates git nginx-extras lua-cjson
-
-RUN pip --no-cache-dir install git+https://github.com/yuvipanda/jupyterhub-nginx-chp.git
 
 # set working directory to the jupyterhub directory
 WORKDIR /srv/jupyterhub

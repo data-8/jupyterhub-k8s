@@ -1,3 +1,12 @@
+kind: StorageClass
+apiVersion: storage.k8s.io/v1beta1
+metadata:
+  name: single-user-storage
+provisioner: kubernetes.io/gce-pd
+parameters:
+  type: pd-standard
+  zone: us-central1-a
+---
 kind: ConfigMap
 apiVersion: v1
 metadata:
@@ -9,24 +18,12 @@ data:
   oauth.client-id.google: "92948014362-c7jc8k20co1e4eqmg8095818htadijat.apps.googleusercontent.com"
   oauth.client-secret.google: "BabUWSqHd4ZekBqiaur4S1cm"
 ---
-apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: data8-hub-workdir-01
-spec:
-  capacity:
-    storage: 10Gi
-  accessModes:
-    - ReadWriteOnce
-  persistentVolumeReclaimPolicy: Retain
-  gcePersistentDisk:
-    pdName: data8-hub-workdir-01
-    fsType: ext4
----
 kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
   name: data8-workdir
+  annotations:
+    volume.beta.kubernetes.io/storage-class: single-user-storage
 spec:
   accessModes:
     - ReadWriteOnce
