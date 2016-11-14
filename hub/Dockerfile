@@ -11,6 +11,8 @@ RUN pip install git+git://github.com/docker/docker-py.git@1.8.1
 RUN pip3 --no-cache-dir install git+https://github.com/data-8/kubespawner.git@volumes
 RUN pip3 --no-cache-dir install git+https://github.com/yuvipanda/jupyterhub-nginx-chp.git
 
+ADD jupyterhub_config.py /srv/jupyterhub_config.py
+
 # is this line needed anymore??
 RUN /opt/conda/bin/pip install oauthenticator==0.4.*
 
