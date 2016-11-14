@@ -4,10 +4,15 @@ import sys
 # Configuration file for Jupyter Hub
 c = get_config()
 
-# Use the nginx based proxy, rather than the nodejs one
-c.JupyterHub.proxy_cmd = '/opt/conda/bin/nchp'
-# Proxy and hub is running on the same machine
-c.JupyterHub.ip = '0.0.0.0'
+# Connect to a proxy running in a different pod
+c.JupyterHub.proxy_api_ip = os.environ['PROXY_API_SERVICE_HOST']
+c.JupyterHub.proxy_api_port = int(os.environ['PROXY_API_SERVICE_PORT'])
+
+c.JupyterHub.ip = os.environ['PROXY_PUBLIC_SERVICE_HOST']
+c.JupyterHub.port = int(os.environ['PROXY_PUBLIC_SERVICE_PORT'])
+
+# the hub should listen on all interfaces, so the proxy can access it
+c.JupyterHub.hub_ip = '0.0.0.0'
 
 # Base configuration
 c.JupyterHub.log_level = "INFO"
@@ -46,7 +51,7 @@ c.KubeSpawner.singleuser_image_spec = 'data8/jupyterhub-k8s-user:data8_jupyterhu
 
 # Configure dynamically provisioning pvc
 c.KubeSpawner.pvc_name_template = 'claim-{username}-{userid}'
-c.KubeSpawner.storage_class = 'single-user-storage'
+c.KubeSpawner.storage_class = 'gce-standard-storage'
 c.KubeSpawner.access_modes = ['ReadWriteOnce']
 c.KubeSpawner.storage = '10Gi'
 
@@ -66,15 +71,14 @@ c.KubeSpawner.volume_mounts = [
     }
 ]
 
-# The spawned containers need to be able to talk to the hub, ok through the proxy!
-c.KubeSpawner.hub_connect_ip = os.environ['HUB_PROXY_SERVICE_HOST']
-c.KubeSpawner.hub_connect_port = int(os.environ['HUB_PROXY_SERVICE_PORT'])
+# Gives spawned containers access to the API of the hub
+c.KubeSpawner.hub_connect_ip = os.environ['HUB_SERVICE_HOST']
+c.KubeSpawner.hub_connect_port = int(os.environ['HUB_SERVICE_PORT'])
 
 # Allow culler to cull juptyerhub
 c.JupyterHub.api_tokens = {
     os.environ['CULL_JHUB_TOKEN']: 'cull',
 }
-c.Authenticator.admin_users = {'cull', 'derrickmar1215'}
 
+c.Authenticator.admin_users = {'cull'}
 c.Authenticator.whitelist = whitelist = set()
-
