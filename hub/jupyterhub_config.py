@@ -48,7 +48,7 @@ c.KubeSpawner.namespace = os.environ.get('POD_NAMESPACE', 'default')
 # First pulls can be really slow, so let's give it a big timeout
 c.KubeSpawner.start_timeout = 60 * 5  # Up to 5 minutes, first pulls can be really slow
 
-c.KubeSpawner.singleuser_image_spec = 'data8/jupyterhub-k8s-user:data8_jupyterhubv2'
+c.KubeSpawner.singleuser_image_spec = 'data8/jupyterhub-k8s-user:data8_jupyterhubv3'
 
 # Configure dynamically provisioning pvc
 c.KubeSpawner.pvc_name_template = 'claim-{username}-{userid}'
