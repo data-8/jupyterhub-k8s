@@ -4,6 +4,7 @@ import sys
 # Configuration file for Jupyter Hub
 c = get_config()
 
+print("HELLO")
 # Connect to a proxy running in a different pod
 c.JupyterHub.proxy_api_ip = os.environ['PROXY_API_SERVICE_HOST']
 c.JupyterHub.proxy_api_port = int(os.environ['PROXY_API_SERVICE_PORT'])
