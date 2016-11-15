@@ -1,4 +1,3 @@
-# Small change
 # We are using a GCE disk as persistent storage for the Hub
 # and for each individual user node.
 #
