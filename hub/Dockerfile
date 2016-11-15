@@ -31,4 +31,4 @@ WORKDIR /srv/jupyterhub
 # JupyterHub API port
 EXPOSE 8081
 
-CMD ["jupyterhub", "-f", "/srv/jupyterhub/jupyterhub_config.py", "--no-ssl"]
+CMD ["jupyterhub", "-f", "/srv/jupyterhub_config.py", "--no-ssl"]
