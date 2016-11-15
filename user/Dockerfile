@@ -124,5 +124,3 @@ RUN pip install --egg git+https://github.com/gallantlab/pycortex@data8
 
 RUN apt-get clean
 RUN conda clean --all --yes
-
-USER $NB_USER
