@@ -16,6 +16,7 @@ c.JupyterHub.admin_access = True
 c.JupyterHub.confirm_no_ssl = True
 c.JupyterHub.proxy_check_interval = 30
 
+print("Hello Sam")
 # Configure the authenticator
 c.JupyterHub.authenticator_class = 'oauthenticator.GoogleOAuthenticator'
 
