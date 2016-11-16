@@ -99,8 +99,8 @@ spec:
         persistentVolumeClaim:
           claimName: data8-workdir
       containers:
-      - name: hub-proxy-container
-        image: data8/jupyterhub-k8s-hub:data8_jupyterhubv3
+      - name: hub-container
+        image: data8/jupyterhub-k8s-hub:data8_jupyterhubv2
         imagePullPolicy: Always
         volumeMounts:
           - mountPath: /srv/jupyterhub
