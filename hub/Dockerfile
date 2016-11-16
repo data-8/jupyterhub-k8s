@@ -4,24 +4,14 @@ RUN apt-get update
 RUN apt-get install -y --no-install-recommends python3 python3-pip ca-certificates git nginx-extras lua-cjson
 
 # upgrade pip
-RUN pip install --upgrade pip
+RUN pip3 install --upgrade pip
 
 RUN pip3 install --no-cache-dir --pre jupyterhub
-
-# Install dockerspawner and oauthenticator
-RUN pip install git+git://github.com/docker/docker-py.git@1.8.1
 
 RUN pip3 --no-cache-dir install git+https://github.com/jupyterhub/kubespawner.git
 RUN pip3 --no-cache-dir install git+https://github.com/yuvipanda/jupyterhub-nginx-chp.git
 
 ADD jupyterhub_config.py /srv/jupyterhub_config.py
-
-# is this line needed anymore??
-RUN /opt/conda/bin/pip install oauthenticator==0.4.*
-
-# Install the statsd module for DataDog
-RUN pip install statsd
-
 
 # set working directory to the jupyterhub directory
 WORKDIR /srv/jupyterhub
