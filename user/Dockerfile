@@ -1,5 +1,7 @@
 FROM jupyter/singleuser
 
+USER root
+
 # Additional TeX packages for notebooks with unicode characters
 RUN apt-get update -q && \
   DEBIAN_FRONTEND=noninteractive apt-get install -q -y \
@@ -21,6 +23,8 @@ RUN wget -q -P /usr/share/fonts \
 #
 # For the similar reasons, we put most frequently changed requirements at the
 # bottom.
+
+USER $NB_USER
 
 # For reproducibility
 RUN conda install --yes ipython==4.2.0
@@ -48,6 +52,8 @@ RUN conda install --yes gensim==0.12.4
 RUN conda install --yes nltk==3.2.1
 # For neuro connector ; mark.lescroart
 RUN conda install --yes lxml==3.6.4
+
+USER root
 
 # Pre-generate font cache so the user does not see fc-list warning when
 # importing datascience. https://github.com/matplotlib/matplotlib/issues/5836
@@ -122,3 +128,5 @@ RUN pip install --egg git+https://github.com/gallantlab/pycortex@data8
 
 RUN apt-get clean
 RUN conda clean --all --yes
+
+USER $NB_USER
