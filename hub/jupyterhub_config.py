@@ -1,4 +1,7 @@
 import os
+import sys
+
+sys.path.insert(0, '/srv/oauthenticator')
 
 c.JupyterHub.spawner_class = 'kubespawner.KubeSpawner'
 
@@ -51,5 +54,9 @@ c.JupyterHub.authenticator_class = 'dummyauthenticator.DummyAuthenticator'
 c.JupyterHub.api_tokens = {
     os.environ['CULL_JHUB_TOKEN']: 'cull',
 }
+
+c.JupyterHub.authenticator_class = 'oauthenticator.GoogleOAuthenticator'
+c.GoogleOAuthenticator.hosted_domain = 'berkeley.edu'
+c.GoogleOAuthenticator.login_service = 'UC Berkeley'
 
 c.Authenticator.admin_users = {'cull'}
