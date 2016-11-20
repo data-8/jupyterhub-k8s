@@ -11,11 +11,6 @@ RUN pip3 --no-cache-dir install requests-futures jupyterhub-dummyauthenticator p
 RUN pip3 --no-cache-dir install git+https://github.com/jupyterhub/kubespawner.git
 RUN pip3 --no-cache-dir install git+https://github.com/yuvipanda/jupyterhub-nginx-chp.git
 RUN pip3 install git+https://github.com/data-8/nbinteract.git
-RUN pip3 install git+https://github.com/yuvipanda/nbresuse.git
-
-RUN jupyter serverextension enable --py nbresuse
-RUN jupyter nbextension install --py nbresuse
-RUN jupyter nbextension enable --py nbresuse
 
 RUN jupyter serverextension enable --py nbinteract
 RUN jupyter nbextension install --py nbinteract
