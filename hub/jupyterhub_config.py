@@ -18,6 +18,7 @@ c.KubeSpawner.start_timeout = 60 * 5  # Upto 5 minutes, first pulls can be reall
 
 # Our simplest user image! Optimized to just... start, and be small!
 c.KubeSpawner.singleuser_image_spec = 'data8/jupyterhub-k8s-user:60b6c160f0e2'
+c.KubeSpawner.singleuser_image_pull_policy = 'Always'
 
 # Configure dynamically provisioning pvc
 c.KubeSpawner.pvc_name_template = 'claim-{username}-{userid}'
