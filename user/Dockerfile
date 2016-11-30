@@ -167,7 +167,7 @@ WORKDIR /home/$NB_USER/work
 
 USER $NB_USER
 
-ENTRYPOINT ["tini", "--"]
+ENTRYPOINT ["/usr/local/bin/tini", "--"]
 
 CMD jupyterhub-singleuser \
   --port=8888 \
