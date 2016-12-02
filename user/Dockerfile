@@ -152,6 +152,16 @@ RUN wget --quiet https://github.com/krallin/tini/releases/download/v0.10.0/tini 
     chmod +x /usr/local/bin/tini
 #######################################################################
 
+RUN wget "https://docs.google.com/uc?id=0B3X9GlR6EmbnQ0FtZmJJUXEyRTA&export=download"
+RUN mv uc?id=0B3X9GlR6EmbnQ0FtZmJJUXEyRTA&export=download gdrive
+RUN chmod +x gdrive
+RUN sudo mv ./gdrive /usr/local/bin
+
+RUN pip install git+https://github.com/data-8/nbgdrive.git
+RUN jupyter serverextension enable --py nbgdrive
+RUN jupyter nbextension install --system --py nbgdrive
+RUN jupyter nbextension enable --system --py nbgdrive
+
 RUN pip install git+https://github.com/data-8/nbinteract.git
 RUN pip --no-cache-dir install pytest webargs requests gitpython toolz
 RUN jupyter serverextension enable --system --py nbinteract
