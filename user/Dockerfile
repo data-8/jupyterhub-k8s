@@ -120,18 +120,6 @@ RUN jupyter serverextension enable  --system --py nbresuse
 RUN jupyter nbextension     install --system --py nbresuse
 RUN jupyter nbextension     enable  --system --py nbresuse
 
-# Download GDrive CLI from prasmussen
-RUN wget "https://docs.google.com/uc?id=0B3X9GlR6EmbnQ0FtZmJJUXEyRTA&export=download"
-RUN mv uc\?id\=0B3X9GlR6EmbnQ0FtZmJJUXEyRTA\&export\=download gdrive
-RUN chmod +x gdrive
-RUN sudo mv ./gdrive /usr/local/bin
-
-# Allow GDrive sync via nbgdrive extension
-RUN pip install git+https://github.com/jiefugong/nbgdrive.git
-RUN jupyter serverextension enable  --system --py nbgdrive
-RUN jupyter nbextension     install --system --py nbgdrive
-RUN jupyter nbextension     enable  --system --py nbgdrive
-
 #######################################################################
 
 ################################ MISC #################################
@@ -170,6 +158,18 @@ RUN pip --no-cache-dir install pytest webargs requests gitpython toolz
 RUN jupyter serverextension enable --system --py nbinteract
 RUN jupyter nbextension install --system --py nbinteract
 RUN jupyter nbextension enable --system --py nbinteract
+
+# Download GDrive CLI from prasmussen
+RUN wget "https://docs.google.com/uc?id=0B3X9GlR6EmbnQ0FtZmJJUXEyRTA&export=download"
+RUN mv uc\?id\=0B3X9GlR6EmbnQ0FtZmJJUXEyRTA\&export\=download gdrive
+RUN chmod +x gdrive
+RUN sudo mv ./gdrive /usr/local/bin
+
+# Allow GDrive sync via nbgdrive extension
+RUN pip install git+https://github.com/jiefugong/nbgdrive.git
+RUN jupyter serverextension enable  --system --py nbgdrive
+RUN jupyter nbextension     install --system --py nbgdrive
+RUN jupyter nbextension     enable  --system --py nbgdrive
 
 # CLEANUP
 RUN apt-get clean
