@@ -48,7 +48,7 @@ That deploys JupyterHub!
 
 ### Azure Deployment
 
-An easy way to deploy k8s on azure is through [`kubernetes-anywhere`][k8sanywhere].
+An easy way to deploy k8s on azure is through [`kubernetes-anywhere`][k8sanywhere]. Make sure to run all of the following on an Ubuntu vm on Azure.
 
 First, install [`docker`][docker]
 
