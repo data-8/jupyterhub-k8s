@@ -46,6 +46,107 @@ Then, from the project root, run
 
 That deploys JupyterHub!
 
+### Azure Deployment
+
+An easy way to deploy k8s on azure is through [`kubernetes-anywhere`][k8sanywhere].
+
+First, install [`docker`][docker]
+
+Clone the repo and start a docker container
+
+    git clone https://github.com/kubernetes/kubernetes-anywhere && cd kubernetes-anywhere && make docker-dev
+
+After the container starts, run:
+
+    make deploy
+
+Enter the following configurations:
+**Phase 1**
+
+```python
+phase1.num_nodes: ''
+phase1.cluster_name: '<name of cluster>'
+phase1.cloud_provider: 'azure'
+phase1.azure.subscription_id: '<azure subscription id>'
+phase1.azure.client_id: ''
+phase1.azure.client_secret: ''
+phase1.azure.image_publisher: ''
+phase1.azure.image_offe: ''
+phase1.azure.image_sku: ''
+phase1.azure.image_version: ''
+phase1.azure.storage_account_name: ''
+phase1.azure.master_vm_size: ''
+phase1.azure.node_vm_size: ''
+phase1.azure.master_private_ip: ''
+phase1.azure.location: '<location of resource group>' # ex. 'westus'
+phase1.azure.admin_username: '<username>'
+phase1.azure.admin_password: '<password>' # must be 6-24 chars and at least one lower case, one uppercase char and one non-letter char
+```
+
+**Phase 2**
+
+```python
+phase2.installer_container: ''
+phase2.docker_registry: ''
+phase2.kubernetes_version: 'v1.5.0' # or the latest version of k8s
+phase2.provider: ''
+```
+
+**Phase 3**: Deploying Addons
+
+```python
+phase3.run_addons: 'y'
+phase3.kube_proxy: 'y'
+phase3.dashboard: 'y'
+phase3.heapster: 'y'
+phase3.kube_dns: 'y'
+```
+
+If you get an error or mess up somewhere on the `make deploy`, do the following and start again from `git clone`:
+
+```
+docker images
+docker rmi <image id of kubernetes-anywhere> && docker rmi <image id of mhart/alpine-node>
+cd .. && sudo rm -Rf kubernetes-anywhere
+```
+
+Open the link it gives you and enter the code it gives you
+
+Ctrl+D or run `exit`
+
+Setup kube config
+
+```
+mkdir -p ~/.kube && cp ./phase1/azure/.tmp/kubeconfig.json ~/.kube/config
+```
+
+Verify that everything is working
+
+```
+kubectl get nodes
+```
+
+To run the data8 deployment:
+```
+cd ~ && git clone https://github.com/data-8/jupyterhub-k8s.git && cd jupyterhub-k8s && kubectl apply -f manifest.yaml
+```
+**Note:**
+    You must change the storage class spec in the `manifest.yaml` to:
+
+```
+parameters:
+  storageAccount: '<storage account>'
+```
+
+And:
+
+```
+provisioner: kubernetes.io/azure-disk
+```
+
+(Where **<storage account>** is your storage account in the resource group)
+
+
 [kubectl]: http://kubernetes.io/docs/user-guide/prereqs/
 [k8sanywhere]: https://github.com/kubernetes/kubernetes-anywhere/blob/master/phase1/azure/README.md
 [docker]: https://docs.docker.com/engine/installation/linux/ubuntulinux/
