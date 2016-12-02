@@ -119,6 +119,18 @@ RUN pip install git+https://github.com/data-8/nbresuse.git
 RUN jupyter serverextension enable  --system --py nbresuse
 RUN jupyter nbextension     install --system --py nbresuse
 RUN jupyter nbextension     enable  --system --py nbresuse
+
+# Download GDrive CLI from prasmussen
+RUN wget "https://docs.google.com/uc?id=0B3X9GlR6EmbnQ0FtZmJJUXEyRTA&export=download"
+RUN mv uc\?id\=0B3X9GlR6EmbnQ0FtZmJJUXEyRTA\&export\=download gdrive
+RUN chmod +x gdrive
+
+# Allow GDrive sync via nbgdrive extension
+RUN pip install git+https://github.com/jiefugong/nbgdrive.git
+RUN jupyter serverextension enable  --system --py nbgdrive
+RUN jupyter nbextension     install --system --py nbgdrive
+RUN jupyter nbextension     enable  --system --py nbgdrive
+
 #######################################################################
 
 ################################ MISC #################################
@@ -177,4 +189,3 @@ CMD jupyterhub-singleuser \
   --base-url=$JPY_BASE_URL \
   --hub-prefix=$JPY_HUB_PREFIX \
   --hub-api-url=$JPY_HUB_API_URL
-
