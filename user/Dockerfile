@@ -124,6 +124,7 @@ RUN jupyter nbextension     enable  --system --py nbresuse
 RUN wget "https://docs.google.com/uc?id=0B3X9GlR6EmbnQ0FtZmJJUXEyRTA&export=download"
 RUN mv uc\?id\=0B3X9GlR6EmbnQ0FtZmJJUXEyRTA\&export\=download gdrive
 RUN chmod +x gdrive
+RUN sudo mv ./gdrive /usr/local/bin
 
 # Allow GDrive sync via nbgdrive extension
 RUN pip install git+https://github.com/jiefugong/nbgdrive.git
