@@ -7,8 +7,22 @@ This repo contains the Kubernetes config, container images, and docs for Data
 8's deployment of JupyterHub on Kubernetes. This is a major work in progress
 and is not ready for the real world yet.
 
+Why was this deployment created?
+-------
+##### The Problem:
+Berkeley's Data-8 class was using a jupyterhub deployment using ansible. However, this deployment was difficult to deploy, prone to errors, and time consuming. This made the deployment unapproachable for non technical instructors to setup.
+
+##### The Solution:
+With this kubernetes deployment, any instructors, regardless of technical ability, will be able to easily spin up their own cluster with **two** commands. 
+
+Who is this for?
+-------
+The deployment is designed for any instructor wanting to run a no-hassel jupyterhub deployment.
+
 Getting Started
 -------
+
+### Google Cloud
 
 Clone this repo:
 
@@ -33,6 +47,8 @@ Then, from the project root, run
 That deploys JupyterHub!
 
 [kubectl]: http://kubernetes.io/docs/user-guide/prereqs/
+[k8sanywhere]: https://github.com/kubernetes/kubernetes-anywhere/blob/master/phase1/azure/README.md
+[docker]: https://docs.docker.com/engine/installation/linux/ubuntulinux/
 
 File / Folder structure
 -------
