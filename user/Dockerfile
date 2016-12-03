@@ -41,6 +41,8 @@ RUN useradd -m -s /bin/bash -N -u $NB_UID $NB_USER && \
 USER $NB_USER
 
 # Setup jovyan home directory
+# These directories are hidden and don't exist after mounting to the PVC occurs!
+# TODO: Figure out how to fix this!
 RUN mkdir /home/$NB_USER/work && \
     mkdir /home/$NB_USER/.jupyter && \
     echo "cacert=/etc/ssl/certs/ca-certificates.crt" > /home/$NB_USER/.curlrc
@@ -103,6 +105,10 @@ RUN apt-get update && apt-get install -yq \
 RUN pip install git+https://github.com/ryanlovett/nbserverproxy.git
 RUN pip install --egg git+https://github.com/gallantlab/pycortex@data8
 
+# CLEANUP
+RUN apt-get clean
+RUN conda clean --all --yes
+
 ####################### NOTEBOOK EXTENSIONS  ###########################
 RUN jupyter serverextension enable --system --py nbserverproxy
 
@@ -158,16 +164,12 @@ RUN jupyter serverextension enable --system --py nbinteract
 RUN jupyter nbextension install --system --py nbinteract
 RUN jupyter nbextension enable --system --py nbinteract
 
-# CLEANUP
-RUN apt-get clean
-RUN conda clean --all --yes
-
 EXPOSE 8888
-WORKDIR /home/$NB_USER/work
+WORKDIR /home
 
 USER $NB_USER
 
-ENTRYPOINT ["/usr/local/bin/tini", "--"]
+ENTRYPOINT ["tini", "--"]
 
 CMD jupyterhub-singleuser \
   --port=8888 \
