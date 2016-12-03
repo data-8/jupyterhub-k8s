@@ -136,7 +136,7 @@ spec:
     spec:
       containers:
       - name: proxy-container
-        image: yuvipanda/nchp:v1
+        image: data8/nchp:latest
         env:
           - name: CONFIGPROXY_AUTH_TOKEN
             valueFrom:
