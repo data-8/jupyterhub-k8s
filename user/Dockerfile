@@ -165,9 +165,9 @@ RUN jupyter nbextension install --system --py nbinteract
 RUN jupyter nbextension enable --system --py nbinteract
 
 EXPOSE 8888
-WORKDIR /home
 
 USER $NB_USER
+WORKDIR /home/jovyan/work
 
 ENTRYPOINT ["tini", "--"]
 
@@ -178,5 +178,6 @@ CMD jupyterhub-singleuser \
   --cookie-name=$JPY_COOKIE_NAME \
   --base-url=$JPY_BASE_URL \
   --hub-prefix=$JPY_HUB_PREFIX \
-  --hub-api-url=$JPY_HUB_API_URL
+  --hub-api-url=$JPY_HUB_API_URL \
+  --notebook-dir="/home/jovyan/work"
 
