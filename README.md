@@ -7,6 +7,12 @@ This repo contains the Kubernetes config, container images, and docs for Data
 8's deployment of JupyterHub on Kubernetes. This is a major work in progress
 and is not ready for the real world yet.
 
+Prerequisites
+-------
+- Google Cloud SDK, https://cloud.google.com/sdk/downloads
+- kubectl, http://kubernetes.io/docs/user-guide/prereqs/
+- Helm, https://github.com/kubernetes/helm
+
 Getting Started
 -------
 
@@ -14,33 +20,50 @@ Clone this repo:
 
     git clone https://github.com/data-8/jupyterhub-k8s
 
-Set up a Kubernetes cluster using Google Container Engine. Other cloud
-providers are not currently supported but will be before release.
+and change to the root of the repository. Set up a Kubernetes cluster using
+Google Container Engine.
 
-Configure [`kubectl`][kubectl] to point to your cluster. This is automatically
-done when using `minikube` or the `gcloud` CLI. Verify that
+    gcloud init
+    gcloud container clusters create name_of_cluster
 
-    kubectl cluster-info
+Other cloud providers are not currently supported but will be before release.
+Configure `kubectl` to point to your cluster. This is automatically done when
+using `minikube` or the `gcloud` CLI.
 
-Returns output that looks like:
+Run `kubectl cluster-info` and verify that the kubernetes cluster is running.
 
-    Kubernetes master is running at https://146.148.80.79
+Edit values in `data8-jhub/values.yaml`. Configure
 
-Then, from the project root, run
+ - jhubTokenProxy (the output of `pwgen 64 1`)
+ - jhubApiToken (the output of `openssl rand -hex 32`)
+ - clientIdGoogle (from https://console.developers.google.com)
+ - clientSecretGoogle (from https://console.developers.google.com)
+ - oauthCallbackUrl (http://name-of-hub/hub/oauth_callback)
+ - hostedDomainGoogle (institution-specific value)
+ - loginServiceGoogle (institution-specific value)
 
-    kubectl apply -f manifest.yaml
+For production deployments, generate a static IP:
 
-That deploys JupyterHub!
+    gcloud compute addresses create name_of_ip
+
+and add `loadBalancerIP: aaa.bbb.ccc.ddd` to `data8-jhub/templates/deployment.yaml` 
+underneath selector > name: proxy-pod.
+
+Run `helm init` if you have not already done so, then run `helm install .` to deploys JupyterHub! To see information about your deployment:
+```
+$ kubectl get pods
+$ kubectl get services
+```
 
 [kubectl]: http://kubernetes.io/docs/user-guide/prereqs/
 
 File / Folder structure
 -------
 
-The `manifest.yaml` file in the project root directory contains the entirety of
+The `data8-jhub/` directory in the project root directory contains the entirety of
 the Kubenetes configuration for this deployment.
 
-The subdirectories contain the Dockerfiles and scripts for the images used for
+Other subdirectories contain the Dockerfiles and scripts for the images used for
 this deployment.
 
 All the images for this deployment are pushed to the [data8 Docker Hub][]
