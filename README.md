@@ -13,7 +13,7 @@ Prerequisites
 - kubectl, http://kubernetes.io/docs/user-guide/prereqs/
 - Helm, https://github.com/kubernetes/helm
 
-Getting Started
+Create a Cluster
 -------
 
 Clone this repo:
@@ -21,18 +21,21 @@ Clone this repo:
     git clone https://github.com/data-8/jupyterhub-k8s
 
 and change to the root of the repository. Set up a Kubernetes cluster using
-Google Container Engine.
+Google Container Engine. Other cloud providers are not currently supported
+but will be before release.
 
     gcloud init
     gcloud container clusters create name_of_cluster
 
-Other cloud providers are not currently supported but will be before release.
-Configure `kubectl` to point to your cluster. This is automatically done when
-using `minikube` or the `gcloud` CLI.
+If you are not using `minikube` or the `gcloud` CLI, configure `kubectl` to
+point to your cluster.
 
 Run `kubectl cluster-info` and verify that the kubernetes cluster is running.
 
-Edit values in `data8-jhub/values.yaml`. Configure
+Deploy JupyterHub
+-------
+Run `helm init` if you have not already done so. Edit values in
+`data8-jhub/values.yaml`:
 
  - jhubTokenProxy (the output of `pwgen 64 1`)
  - jhubApiToken (the output of `openssl rand -hex 32`)
@@ -49,13 +52,13 @@ For production deployments, generate a static IP:
 and add `loadBalancerIP: aaa.bbb.ccc.ddd` to `data8-jhub/templates/deployment.yaml` 
 underneath selector > name: proxy-pod.
 
-Run `helm init` if you have not already done so, then run `helm install .` to deploys JupyterHub! To see information about your deployment:
+Run `helm install .` to deploy JupyterHub.
+
+To see information about your deployment:
 ```
 $ kubectl get pods
 $ kubectl get services
 ```
-
-[kubectl]: http://kubernetes.io/docs/user-guide/prereqs/
 
 File / Folder structure
 -------
