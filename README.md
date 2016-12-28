@@ -52,7 +52,7 @@ For production deployments, generate a static IP:
 and add `loadBalancerIP: aaa.bbb.ccc.ddd` to `data8-jhub/templates/deployment.yaml` 
 underneath selector > name: proxy-pod.
 
-Run `helm install .` to deploy JupyterHub.
+Run `helm install data8-jhub` to deploy JupyterHub.
 
 To see information about your deployment:
 ```
