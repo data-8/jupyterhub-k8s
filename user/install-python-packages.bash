@@ -38,13 +38,9 @@ ${CONDA_DIR}/bin/conda install --quiet --yes numpy=1.11*
 ${CONDA_DIR}/bin/conda remove --quiet --yes --force qt pyqt
 
 # DS8 specific packages
-
 ${CONDA_DIR}/bin/pip --no-cache-dir install \
             okpy==1.6.4 \
             pypandoc==1.2.0 \
             datascience==0.8.2
-
-# Execute all connector setup scripts
-ls /usr/local/sbin/connectors-setup/*.bash | xargs -L1 /bin/bash
 
 ${CONDA_DIR}/bin/conda clean -tipsy
