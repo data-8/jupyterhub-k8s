@@ -69,6 +69,19 @@ elif auth_type == 'hmac':
     c.JupyterHub.authenticator_class = 'hmacauthenticator.HMACAuthenticator'
     c.HMACAuthenticator.secret_key = bytes.fromhex(os.environ['HMAC_SECRET_KEY'])
 
+
+def generate_user_email(spawner):
+    """
+    Return the EMAIL environment variable to be set for the user
+
+    git looks here to set identity of committer, and fails if it isn't set properly.
+    """
+    return '{username}@berkeley.edu'.format(username=spawner.user.name)
+
+c.Spawner.environ = {
+    'EMAIL': generate_user_email
+}
+
 c.JupyterHub.api_tokens = {
     os.environ['CULL_JHUB_TOKEN']: 'cull',
 }
