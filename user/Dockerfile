@@ -52,7 +52,7 @@ ENV NB_UID 1000
 
 # Create a jovyan user with UID 1000. It also automatically
 # creates a group with GID 1000 named jovyan
-RUN adduser --gecos '' --shell /bin/bash --uid $NB_UID --disabled-password $NB_USER 
+RUN adduser --gecos '' --shell /bin/bash --uid $NB_UID --disabled-password $NB_USER
 
 # Install conda into $CONDA_DIR, and chown it to $NB_USER
 ADD install-conda.bash /usr/local/sbin/install-conda.bash
@@ -76,10 +76,11 @@ RUN /usr/local/sbin/install-python-packages.bash
 # we have to explicitly set this
 ENV NLTK_DATA ${CONDA_DIR}/nltk
 
+USER root
+
 ADD install-extensions.bash /usr/local/sbin/install-extensions.bash
 RUN /usr/local/sbin/install-extensions.bash
 
-USER root
 # Ensure LaTeX buffer is large enough
 RUN echo buf_size=6400000 > /etc/texmf/texmf.d/10data8.cnf
 RUN update-texmf
