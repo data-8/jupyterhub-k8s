@@ -78,8 +78,18 @@ def generate_user_email(spawner):
     """
     return '{username}@berkeley.edu'.format(username=spawner.user.name)
 
+def generate_user_name(spawner):
+    """
+    Return the EMAIL environment variable to be set for the user
+
+    git looks here to set identity of committer, and fails if it isn't set properly.
+    """
+    return spawner.user.name
+
 c.KubeSpawner.environment = {
-    'EMAIL': generate_user_email
+    'EMAIL': generate_user_email,
+    'GIT_AUTHOR_NAME': generate_user_name,
+    'GIT_COMMITTER_NAME': generate_user_name
 }
 
 c.JupyterHub.api_tokens = {
