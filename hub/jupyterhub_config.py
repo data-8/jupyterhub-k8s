@@ -78,7 +78,7 @@ def generate_user_email(spawner):
     """
     return '{username}@berkeley.edu'.format(username=spawner.user.name)
 
-c.Spawner.environ = {
+c.KubeSpawner.environment = {
     'EMAIL': generate_user_email
 }
 
