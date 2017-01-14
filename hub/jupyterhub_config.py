@@ -80,7 +80,7 @@ def generate_user_email(spawner):
 
 def generate_user_name(spawner):
     """
-    Return the EMAIL environment variable to be set for the user
+    Return the GIT_AUTHOR_NAME and GIT_COMMITTER_NAME environment variable to be set for the user
 
     git looks here to set identity of committer, and fails if it isn't set properly.
     """
