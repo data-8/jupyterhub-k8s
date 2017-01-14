@@ -79,10 +79,10 @@ RUN /bin/bash -c 'ls /usr/local/sbin/connectors-setup/*.bash | xargs -L1 /bin/ba
 # we have to explicitly set this
 ENV NLTK_DATA ${CONDA_DIR}/nltk
 
-USER root
-
 ADD install-extensions.bash /usr/local/sbin/install-extensions.bash
 RUN /usr/local/sbin/install-extensions.bash
+
+USER root
 
 # Ensure LaTeX buffer is large enough
 RUN echo buf_size=6400000 > /etc/texmf/texmf.d/10data8.cnf
