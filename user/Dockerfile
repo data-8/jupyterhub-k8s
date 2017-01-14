@@ -69,8 +69,11 @@ ADD install-base-notebook.bash /usr/local/sbin/install-base-notebook.bash
 RUN /usr/local/sbin/install-base-notebook.bash
 
 ADD install-python-packages.bash /usr/local/sbin/install-python-packages.bash
-ADD connectors /usr/local/sbin/connectors-setup
 RUN /usr/local/sbin/install-python-packages.bash
+# Execute all connector setup scripts
+ADD connectors /usr/local/sbin/connectors-setup
+RUN /bin/bash -c 'ls /usr/local/sbin/connectors-setup/*.bash | xargs -L1 /bin/bash'
+
 
 # Since we put NLTK data in /opt rather than /usr/local,
 # we have to explicitly set this
