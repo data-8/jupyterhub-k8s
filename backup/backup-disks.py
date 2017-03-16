@@ -14,13 +14,29 @@ DEFAULT_NAME_FILTER = 'gke-prod-49ca6b0d-dyna-pvc'
 
 
 def list_disks(compute, project, zone):
+    all_disks = []
     result = compute.disks().list(project=project, zone=zone).execute()
-    return result['items']
+    all_disks.extend(result['items'])
+
+    while 'nextPageToken' in result:
+        result = compute.disks().list(project=project, zone=zone, \
+            pageToken=result['nextPageToken']).execute()
+        all_disks.extend(result['items'])
+
+    return all_disks
 
 
 def list_snapshots(compute, project):
+    all_snapshots = []
     result = compute.snapshots().list(project=project).execute()
-    return result['items']
+    all_snapshots.extend(result['items'])
+
+    while 'nextPageToken' in result:
+        result = compute.snapshots().list(project=project, \
+            pageToken=result['nextPageToken']).execute()
+        all_snapshots.extend(result['items'])
+
+    return all_snapshots
 
 
 def filter_disks_by_name(disks, name):
@@ -30,7 +46,7 @@ def filter_disks_by_name(disks, name):
             if name in disk['name']:
                 filtered_disks.append(disk)
         except KeyError:
-            sys.exit("Improperly formatted disks -- did you enter the right information?")
+            sys.exit("Improperly formatted disks -- is your information correct?")
     return filtered_disks
 
 
@@ -88,7 +104,6 @@ if __name__ == "__main__":
             "kind" : "compute#snapshot",
             "name" : disk['name'],
             "id"   : disk['id']
-          
         }
         create_snapshot_of_disk(compute, disk['name'], DEFAULT_PROJECT_ID, DEFAULT_PROJECT_ZONE, request_body)
 
