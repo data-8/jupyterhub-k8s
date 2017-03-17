@@ -1,19 +1,19 @@
+#!/usr/bin/python3
+
+""" Primary Backup Logic"""
 import json
 import sys
 import datetime
 
 from datetime import date
+from settings import settings
 from googleapiclient import discovery
 from oauth2client.client import GoogleCredentials
 from json.decoder import JSONDecodeError as JsonError
 
-DEFAULT_PROJECT_ID = '92948014362'
-DEFAULT_PROJECT_ZONE = 'us-central1-a'
-DEFAULT_NAMESPACE_KEY = 'kubernetes.io/created-for/pvc/namespace'
-DEFAULT_NAME_FILTER = 'gke-prod-49ca6b0d-dyna-pvc'
-
 
 def list_disks(compute, project, zone):
+    """ Lists all persistent disks used by project """
     all_disks = []
     result = compute.disks().list(project=project, zone=zone).execute()
     all_disks.extend(result['items'])
@@ -27,6 +27,7 @@ def list_disks(compute, project, zone):
 
 
 def list_snapshots(compute, project):
+    """ Lists all snapshots created for this project """
     all_snapshots = []
     result = compute.snapshots().list(project=project).execute()
     all_snapshots.extend(result['items'])
@@ -40,6 +41,8 @@ def list_snapshots(compute, project):
 
 
 def filter_disks_by_name(disks, name):
+    """ Takes in NAME, a predefined prefix to disk names, and filters 
+    disks to only returns those that have NAME """
     filtered_disks = []
     for disk in disks:
         try:
@@ -50,11 +53,13 @@ def filter_disks_by_name(disks, name):
     return filtered_disks
 
 
-def filter_disks_by_namespace(disks, namespace):
+def filter_disks_by_namespace(disks, namespace, namespace_dict_key):
+    """ Takes in NAMESPACE, a predefined string value, and filters
+    disks to only return those belong to NAMESPACE """
     filtered_disks = []
     for disk in disks:
         try:
-            disk_namespace = json.loads(disk['description'])[DEFAULT_NAMESPACE_KEY]
+            disk_namespace = json.loads(disk['description'])[namespace_dict_key]
             if disk_namespace == namespace:
                 filtered_disks.append(disk)
         except (JsonError, KeyError):
@@ -62,7 +67,10 @@ def filter_disks_by_namespace(disks, namespace):
     return filtered_disks
 
 
-def filter_snapshots_by_time(snapshots, retention_period=2):
+def filter_snapshots_by_time(snapshots, retention_period):
+    """ Takes in RETENTION_PERIOD, a number of days, and filters
+    disks to return only those that are older than the retention_period
+    and should be deleted """
     try:
         old_snapshots = list(filter(lambda snapshot: \
             __days_between_now_and_last_backup(snapshot['creationTimestamp'][:10]) > retention_period, snapshots))
@@ -72,16 +80,21 @@ def filter_snapshots_by_time(snapshots, retention_period=2):
 
 
 def create_snapshot_of_disk(compute, disk_name, project, zone, body):
+    """ Creates a snapshot of the provided disk """
     result = compute.disks().createSnapshot(disk=disk_name, project=project, zone=zone, body=body).execute()
     return result
 
 
 def delete_snapshot(compute, project, snapshot):
+    """ Deletes a snapshot given its name """
     result = compute.snapshots().delete(project=project, snapshot=snapshot_name).execute()
     return result
 
 
 def __days_between_now_and_last_backup(date_string):
+    """ Takes in DATE_STRING, formed like %Y-%M-%D such
+    as 2017-03-04 and returns how many days there are between
+    the current date, and that represented by DATE_STRING """
     today = datetime.datetime.now()
     d1 = date(today.year, today.month, today.day)
     snapshot_year, snapshot_month, snapshot_day = \
@@ -92,12 +105,13 @@ def __days_between_now_and_last_backup(date_string):
 
 
 if __name__ == "__main__":
+    options = Settings()
     credentials = GoogleCredentials.get_application_default()
     compute = discovery.build('compute', 'v1', credentials=credentials)
 
-    all_disks = list_disks(compute, DEFAULT_PROJECT_ID, DEFAULT_PROJECT_ZONE)
-    filtered_disks = filter_disks_by_name(all_disks, DEFAULT_NAME_FILTER)
-    all_snapshots = list_snapshots(compute, DEFAULT_PROJECT_ID)
+    all_disks = list_disks(compute, options.project_id, options.project_zone)
+    filtered_disks = filter_disks_by_name(all_disks, options.name_to_filter)
+    all_snapshots = list_snapshots(compute, options.project_id)
 
     for disk in filtered_disks:
         request_body = {
@@ -105,8 +119,8 @@ if __name__ == "__main__":
             "name" : disk['name'],
             "id"   : disk['id']
         }
-        create_snapshot_of_disk(compute, disk['name'], DEFAULT_PROJECT_ID, DEFAULT_PROJECT_ZONE, request_body)
+        create_snapshot_of_disk(compute, disk['name'], options.project_id, options.project_zone, request_body)
 
-    snapshots_to_delete = filter_snapshots_by_time(all_snapshots)
+    snapshots_to_delete = filter_snapshots_by_time(all_snapshots, options.retention_period)
     for snapshot in snapshots_to_delete:
-        delete_snapshot(compute, DEFAULT_PROJECT_ID, snapshot)
+        delete_snapshot(compute, options.project_id, snapshot)
