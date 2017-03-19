@@ -9,6 +9,7 @@ import logging
 from datetime import date
 from settings import settings
 from googleapiclient import discovery
+from kubernetes_client import k8s_control
 from googleapiclient.errors import HttpError
 from oauth2client.client import GoogleCredentials
 from json.decoder import JSONDecodeError as JsonError
@@ -33,7 +34,7 @@ def list_disks(compute, project, zone):
             all_disks.extend(result['items'])
     except HttpError:
         backup_logger.error("Error with HTTP request made to list_disks")
-        sys.exit()
+        sys.exit(1)
 
     return all_disks
 
@@ -51,23 +52,23 @@ def list_snapshots(compute, project):
             all_snapshots.extend(result['items'])
     except HttpError:
         backup_logger.error("Error with HTTP request made to list_snapshots")
-        sys.exit()
+        sys.exit(1)
 
     return all_snapshots
 
 
-def filter_disks_by_name(disks, name):
-    """ Takes in NAME, a predefined prefix to disk names, and filters 
-    disks to only returns those that have NAME """
+def filter_disks_by_name(disks, names):
+    """ Takes in NAMES, a predefined list of disks to snapshot, and filters 
+    disks to only returns those that are in NAMES """
     filtered_disks = []
-    backup_logger.info("Filtering disks by prefix name: %s", name)
+    backup_logger.info("Filtering disks to match the given list of PV names")
     for disk in disks:
         try:
-            if name in disk['name']:
+            if disk['name'] in names:
                 filtered_disks.append(disk)
         except KeyError:
             backup_logger.error("Improperly formatted disks -- is your information correct?")
-            sys.exit()
+            sys.exit(1)
     return filtered_disks
 
 
@@ -97,7 +98,7 @@ def filter_snapshots_by_time(snapshots, retention_period):
                 retention_period, snapshots))
     except (TypeError, KeyError):
         backup_logger.error("Attempted to filter invalid snapshots")
-        sys.exit()
+        sys.exit(1)
     return old_snapshots
 
 
@@ -108,7 +109,7 @@ def create_snapshot_of_disk(compute, disk_name, project, zone, body):
         result = compute.disks().createSnapshot(disk=disk_name, project=project, zone=zone, body=body).execute()
     except HttpError:
         backup_logger.error("Error with HTTP Request made to create disk snapshot")
-        sys.exit()
+        sys.exit(1)
     return result
 
 
@@ -119,7 +120,7 @@ def delete_snapshot(compute, project, snapshot_name):
         result = compute.snapshots().delete(project=project, snapshot=snapshot_name).execute()
     except HttpError:
         backup_logger.error("Error with HTTP Request made to delete snapshot")
-        sys.exit()
+        sys.exit(1)
     return result
 
 
@@ -136,30 +137,31 @@ def __days_between_now_and_last_backup(date_string):
     return delta.days
 
 
-# if __name__ == "__main__":
-options = settings()
-credentials = GoogleCredentials.get_application_default()
-compute = discovery.build('compute', 'v1', credentials=credentials)
-backup_logger.setLevel(logging.INFO)
+if __name__ == "__main__":
+    options = settings()
+    k8s = k8s_control(options)
+    credentials = GoogleCredentials.get_application_default()
+    compute = discovery.build('compute', 'v1', credentials=credentials)
+    backup_logger.setLevel(logging.INFO)
 
-all_disks = list_disks(compute, options.project_id, options.project_zone)
-filtered_disks = filter_disks_by_name(all_disks, options.name_to_filter)
-backup_logger.info("Filtered %d disks out of %d total that are eligible for snapshotting",
-                        len(filtered_disks), len(all_disks))
+    all_disks = list_disks(compute, options.project_id, options.project_zone)
+    filtered_disks = filter_disks_by_name(all_disks, k8s.filtered_disk_names)
+    backup_logger.info("Filtered %d disks out of %d total that are eligible for snapshotting",
+                            len(filtered_disks), len(all_disks))
 
-all_snapshots = list_snapshots(compute, options.project_id)
+    all_snapshots = list_snapshots(compute, options.project_id)
 
-    # for disk in filtered_disks:
-    #     request_body = {
-    #         "kind" : "compute#snapshot",
-    #         "name" : disk['name'],
-    #         "id"   : disk['id']
-    #     }
-    #     create_snapshot_of_disk(compute, disk['name'], options.project_id, options.project_zone, request_body)
+    for disk in filtered_disks:
+        request_body = {
+            "kind" : "compute#snapshot",
+            "name" : disk['name'],
+            "id"   : disk['id']
+        }
+        create_snapshot_of_disk(compute, disk['name'], options.project_id, options.project_zone, request_body)
 
-    # snapshots_to_delete = filter_snapshots_by_time(all_snapshots, options.retention_period)
-    # backup_logger.info("Filtered %d snapshots out of %d total that are eligible for deletion",
-    #                     len(snapshots_to_delete, len(all_snapshots)))
+    snapshots_to_delete = filter_snapshots_by_time(all_snapshots, options.retention_period)
+    backup_logger.info("Filtered %d snapshots out of %d total that are eligible for deletion",
+                        len(snapshots_to_delete, len(all_snapshots)))
 
-    # for snapshot in snapshots_to_delete:
-    #     delete_snapshot(compute, options.project_id, snapshot['name'])
+    for snapshot in snapshots_to_delete:
+        delete_snapshot(compute, options.project_id, snapshot['name'])
