@@ -61,16 +61,19 @@ class k8s_control:
         return result
 
     def get_filtered_disks(self):
-        """ Return a list of GCE Persistent Disks associated with notebook pods"""
+        """Return a list of GCE Persistent Disks associated with notebook pods"""
         pvs = self.v1.list_persistent_volume().items
         pvcs = self.__get_pvcs_in_namespace()
+        backup_logger.debug("Filtering disks by persistent volume claims")
 
         filtered_pvs = list(filter(lambda pv: \
             pv.spec.claim_ref.name in pvcs, pvs))
         return filtered_pvs
 
     def get_filtered_disk_names(self):
+        """Takes filtered disks and returns their associated GCE PD names"""
         filtered_disk_names = []
+        backup_logger.debug("Getting all GCE persistent disk names")
         for disk in self.filtered_disks:
             filtered_disk_names.append(disk.spec.gce_persistent_disk.pd_name)
         return filtered_disk_names
