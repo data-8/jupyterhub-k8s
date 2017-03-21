@@ -45,9 +45,14 @@ data:
   {{ if eq .Values.auth.type "google" -}}
   auth.google.client-id: {{.Values.auth.google.clientId | quote}}
   auth.google.client-secret: {{.Values.auth.google.clientSecret | quote}}
+  auth.google.callback-url: {{.Values.auth.google.callbackUrl}}
   auth.google.hosted-domain: {{.Values.auth.google.hostedDomain | quote}}
   auth.google.login-service: {{.Values.auth.google.loginService | quote}}
-  auth.google.callback-url: {{.Values.auth.google.callbackUrl}}
+  {{- end }}
+  {{ if eq .Values.auth.type "github" -}}
+  auth.github.client-id: {{.Values.auth.github.clientId | quote}}
+  auth.github.client-secret: {{.Values.auth.github.clientSecret | quote}}
+  auth.github.callback-url: {{.Values.auth.github.callbackUrl}}
   {{- end }}
   singleuser.storage.type: {{ .Values.singleuser.storage.type | quote }}
   singleuser.storage.home_mount_path: {{ .Values.singleuser.storage.homeMountPath | quote }}

@@ -43,7 +43,7 @@ proxy:
 # your Cloud Provider. GKE supports this
 publicIP: null
 
-# Google OAuth secrets
+# authenticator
 auth:
   type: dummy
 
