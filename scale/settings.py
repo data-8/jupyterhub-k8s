@@ -19,8 +19,18 @@ class settings:
         self.max_nodes = int(os.environ.get("MAX_NODES", 15))
 
         # TODO: Get rid of these default values specific to Data8
+        # Google Cloud configs
         self.zone = os.environ.get("ZONE", "us-central1-a")
         self.project = os.environ.get("PROJECT", "92948014362")
+
+        # Azure configs
+        self.location = ""
+        self.subscription_id = ""
+        self.client_id = ""
+        self.secret = ""
+        self.tenant_id = ""
+        self.resource_group_name = ""
+        self.container_service_name = ""
 
         self.preemptible_labels = os.environ.get(
             "PREEMPTIBLE_LABELS", "").split(self.env_delimiter)
