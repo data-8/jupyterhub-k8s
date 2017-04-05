@@ -177,7 +177,7 @@ class gce_cluster_control(abstract_cluster_control):
         else:
             scale_logger.info(
                 "Found managed pool %s for resizing", matches[0]['name'])
-            return matches[0]
+            return matches[0]["name"]
 
     def shutdown_specified_node(self, name):
         request_body = {
