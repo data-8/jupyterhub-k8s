@@ -139,8 +139,7 @@ class k8s_control:
         return self.context
 
     def get_num_schedulable(self):
-        """Return number of nodes schedulable AND NOT
-        IN THE LIST OF CRITICAL NODES"""
+        """Return number of nodes schedulable"""
         result = 0
         for node in self.nodes:
             if not node.spec.unschedulable:
