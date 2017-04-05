@@ -17,3 +17,10 @@ and necessary permissions to access the cluster
 
 ### Running This Script
 Make sure you read `settings.py` first to look at default values for your cluster. By default, values are specified to the Data8 cluster. You can change your local environment variables to modify how this script runs.
+
+### Advanced
+Before running, please configure your cluster such that you are assessing the correct nodes and pods. The autobackup script proceeds in the following fashion:
+1. Extracting all pods and nodes corresponding to the pre-defined cluster
+2. Comparing all persistent volume claims and keeping those belonging to the notebook type (this is to be changed later)
+3. Claims that are kept will be filtered for their persistent disk names, which are passed to the Google Cloud API
+4. These names are then matched to all available persistent disk structures for the project, and replaced

@@ -16,10 +16,10 @@ class k8s_control:
     cluster always use the node and pods status at the
     time it was initiated"""
 
-    def __init__(self, options):
+    def __init__(self, options, context="dev"):
         """ Needs to be initialized with options as an
         instance of settings"""
-        self.context = self.configure_new_context(options.default_context)
+        self.context = self.configure_new_context(context)
         self.options = options
         self.v1 = client.CoreV1Api()
         self.pods = self.get_pods()
@@ -44,6 +44,7 @@ class k8s_control:
             backup_logger.fatal("Vague context specification")
             sys.exit(1)
         config.load_kube_config(context=context_to_activate)
+        backup_logger.info("Successfully loaded %s context" % new_context)
         return context_to_activate
 
     def get_nodes(self):
@@ -68,6 +69,7 @@ class k8s_control:
 
         filtered_pvs = list(filter(lambda pv: \
             pv.spec.claim_ref.name in pvcs, pvs))
+
         return filtered_pvs
 
     def get_filtered_disk_names(self):
@@ -77,6 +79,7 @@ class k8s_control:
         for disk in self.filtered_disks:
             filtered_disk_names.append(disk.spec.gce_persistent_disk.pd_name)
         return filtered_disk_names
+
 
     def __get_pvcs_in_namespace(self):
         """Return a list of persistent volume claims belonging to POD_TYPE"""
