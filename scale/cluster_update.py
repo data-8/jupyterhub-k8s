@@ -24,7 +24,6 @@ scale_logger.info(
     "Can support cluster scaling on providers: %s", supported_platform)
 
 
-# TODO: an abstract provider-side cluster resizing interface should be created
 
 class abstract_cluster_control:
 
