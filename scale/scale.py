@@ -148,5 +148,7 @@ if __name__ == "__main__":
         options.context_cloud = args.context_for_cloud
     else:
         options.context_cloud = options.context
-
-    scale(options)
+    try:
+        scale(options)
+    except KeyboardInterrupt:
+        pass
