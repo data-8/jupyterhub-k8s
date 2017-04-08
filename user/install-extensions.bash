@@ -8,7 +8,7 @@ ${CONDA_DIR}/bin/pip install git+https://github.com/ryanlovett/nbserverproxy.git
 ${CONDA_DIR}/bin/jupyter serverextension enable --sys-prefix --py nbserverproxy
 
 # ipywidgets!
-${CONDA_DIR}/bin/pip install ipywidgets
+${CONDA_DIR}/bin/pip install ipywidgets==5.2.3
 ${CONDA_DIR}/bin/jupyter nbextension enable --sys-prefix --py widgetsnbextension
 
 # nbresuse to show users memory usage
