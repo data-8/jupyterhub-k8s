@@ -4,6 +4,7 @@
 
 import logging
 import argparse
+import random
 
 from workload import schedule_goal
 from update_nodes import update_unschedulable
@@ -71,6 +72,11 @@ def scale(options):
     for node in k8s.nodes:
         if node.metadata.name not in k8s.critical_node_names:
             nodes.append(node)
+    
+    # Shuffle the node list so that when there are multiple nodes
+    # with same number of pods, they will be randomly picked to
+    # be made unschedulable
+    random.shuffle(nodes)
 
     # goal is the total number of nodes we want in the cluster
     goal = schedule_goal(k8s, options)
