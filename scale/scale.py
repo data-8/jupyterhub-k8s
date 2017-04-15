@@ -49,10 +49,10 @@ def resize_for_new_nodes(new_total_nodes, k8s, cluster, test=False):
         if not test:
             cluster.add_new_node(new_total_nodes)
             wait_time = 130
-            scale_logger.info(
+            scale_logger.debug(
                 "Sleeping for %i seconds for the node to be ready for populating", wait_time)
             time.sleep(wait_time)
-            scale_logger.info("Populate images to new nodes")
+            scale_logger.debug("Populate images to new nodes")
             for image_url in k8s.image_urls:
                 populate_pods(k8s.context, image_url)
 
