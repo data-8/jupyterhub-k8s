@@ -6,7 +6,6 @@ import logging
 import argparse
 import random
 import time
-import requests
 
 from workload import schedule_goal
 from update_nodes import update_unschedulable
@@ -15,6 +14,7 @@ from settings import settings
 from utils import user_confirm, populate_pods
 from kubernetes_control import k8s_control
 from kubernetes_control_test import k8s_control_test
+from slack_message import slack_handler
 
 logging.basicConfig(
     format='%(asctime)s %(levelname)s %(message)s')
@@ -72,12 +72,10 @@ def scale(options):
     else:
         k8s = k8s_control(options)
 
-    if options.slack_token:
-        requests.get(
-            "https://slack.com/api/chat.postMessage?token=%s&channel=C48QN9GHK&text=%s&username=autoscaler&as_user=true" % (
-                options.slack_token,
-                "autoscaler message!"
-            ))
+    scale_logger.addHandler(slack_handler(options.slack_token))
+    if not options.slack_token:
+        scale_logger.info(
+            "No message will be sent to slack since there is no token provided")
 
     scale_logger.info("Scaling on cluster %s", k8s.get_cluster_name())
 
