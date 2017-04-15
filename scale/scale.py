@@ -6,6 +6,7 @@ import logging
 import argparse
 import random
 import time
+import requests
 
 from workload import schedule_goal
 from update_nodes import update_unschedulable
@@ -70,6 +71,13 @@ def scale(options):
         k8s = k8s_control_test(options)
     else:
         k8s = k8s_control(options)
+
+    if options.slack_token:
+        requests.get(
+            "https://slack.com/api/chat.postMessage?token=%s&channel=C48QN9GHK&text=%s&username=autoscaler&as_user=true" % (
+                options.slack_token,
+                "autoscaler message!"
+            ))
 
     scale_logger.info("Scaling on cluster %s", k8s.get_cluster_name())
 

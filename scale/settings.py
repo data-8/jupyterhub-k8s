@@ -36,5 +36,7 @@ class settings:
         self.context = ""
         self.context_cloud = ""
 
+        self.slack_token = os.environ.get("SLACK_TOKEN", "")
+
         # only used for debugging
         self.default_context = os.environ.get("DEFAULT_CONTEXT", "prod")
