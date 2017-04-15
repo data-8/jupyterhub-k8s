@@ -5,6 +5,7 @@
 import logging
 import argparse
 import random
+import time
 
 from workload import schedule_goal
 from update_nodes import update_unschedulable
@@ -46,6 +47,10 @@ def resize_for_new_nodes(new_total_nodes, k8s, cluster, test=False):
         scale_logger.info("Resizing up to: %d nodes", new_total_nodes)
         if not test:
             cluster.add_new_node(new_total_nodes)
+            wait_time = 130
+            scale_logger.info(
+                "Sleeping for %i seconds for the node to be ready for populating", wait_time)
+            time.sleep(wait_time)
             scale_logger.info("Populate images to new nodes")
             for image_url in k8s.image_urls:
                 populate_pods(k8s.context, image_url)
@@ -72,7 +77,7 @@ def scale(options):
     for node in k8s.nodes:
         if node.metadata.name not in k8s.critical_node_names:
             nodes.append(node)
-    
+
     # Shuffle the node list so that when there are multiple nodes
     # with same number of pods, they will be randomly picked to
     # be made unschedulable
@@ -103,6 +108,7 @@ def scale(options):
     else:
         # CRITICAL NODES SHOULD NOT BE SHUTDOWN
         shutdown_empty_nodes(nodes, k8s, cluster)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
