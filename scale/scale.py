@@ -72,7 +72,6 @@ def scale(options):
     else:
         k8s = k8s_control(options)
 
-    scale_logger.addHandler(slack_handler(options.slack_token))
     if not options.slack_token:
         scale_logger.info(
             "No message will be sent to slack since there is no token provided")
@@ -98,6 +97,8 @@ def scale(options):
     scale_logger.info("Found %i critical nodes",
                       len(k8s.nodes) - len(nodes))
     scale_logger.info("Recommending total %i nodes for service", goal)
+
+    scale_logger.addHandler(slack_handler(options.slack_token))
 
     if confirm(("Updating unschedulable flags to ensure %i nodes are unschedulable" % max(len(k8s.nodes) - goal, 0))):
         update_unschedulable(max(len(k8s.nodes) - goal, 0), nodes, k8s)
