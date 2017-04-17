@@ -14,6 +14,7 @@ logging.getLogger("kubernetes").setLevel(logging.WARNING)
 class k8s_control_test(k8s_control):
 
     """Dummy test class for k8s_control"""
+    test = True
 
     def __init__(self, options):
         k8s_control.__init__(self, options)

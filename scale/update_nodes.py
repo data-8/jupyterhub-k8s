@@ -77,8 +77,8 @@ def update_unschedulable(number_unschedulable, nodes, k8s, calculate_priority=No
     scale_logger.debug("%i nodes newly blocked", len(toBlock))
     __update_nodes(k8s, toUnBlock, False)
     scale_logger.debug("%i nodes newly unblocked", len(toUnBlock))
-    if len(toBlock) != 0 or len(toUnBlock) != 0:
+    if (len(toBlock) != 0 or len(toUnBlock) != 0) and not k8s.test:
         slack_logger.info(
-            "%i nodes newly blocked, %i nodes newly blocked", len(toBlock), len(toUnBlock))
+            "%i nodes newly blocked, %i nodes newly unblocked", len(toBlock), len(toUnBlock))
 
     return len(toBlock) - len(toUnBlock)

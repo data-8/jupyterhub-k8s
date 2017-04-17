@@ -111,11 +111,11 @@ def scale(options):
     if goal > len(k8s.nodes):
         scale_logger.info(
             "Resize the cluster to %i nodes to satisfy the demand", goal)
-        slack_logger.info(
-            "Cluster resized to %i nodes to satisfy the demand", goal)
         if options.test_cloud:
             resize_for_new_nodes_test(goal, k8s, cluster)
         else:
+            slack_logger.info(
+                "Cluster resized to %i nodes to satisfy the demand", goal)
             resize_for_new_nodes(goal, k8s, cluster)
     if options.test_cloud:
         shutdown_empty_nodes_test(nodes, k8s, cluster)
@@ -145,6 +145,8 @@ if __name__ == "__main__":
         scale_logger.setLevel(logging.DEBUG)
     else:
         scale_logger.setLevel(logging.INFO)
+
+    slack_logger.setLevel(logging.INFO)
 
     # Retrieve settings from the environment
     options = settings()
