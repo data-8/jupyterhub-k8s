@@ -102,20 +102,17 @@ def create_snapshot_of_disk(compute, disk_name, project, zone, body):
 	return result
 
 
-def create_disk_from_snapshot(compute, new_disk_name, snapshot_url, project, zone):
-	""" Creates a new disk with NEW_DISK_NAME from the supplied SNAPSHOT_URL """
-	request_body = {
-		"kind" : "compute#disk",
-		"name" : new_disk_name,
-		"sourceSnapshot" : snapshot_url
-	}
-	try:
-		backup_logger.debug("Creating new disk from snapshot url %s", snapshot_url)
-		result = compute.disks().insert(project=project, zone=zone, body=request_body).execute()
-	except HttpError:
-		backup_logger.error("Error with HTTP Request made to create disk from snapshot")
-		sys.exit(1)
-	return result
+def create_disks_from_snapshot_ids(all_snapshots, snapshot_ids, compute, options):
+	""" Takes in a refreshed ALL_SNAPSHOTS, compares all of them to gather a list of snapshots
+	recently created and ready to be formated into a disk, and creates those disks """
+	today = datetime.datetime.now()
+	today_as_str = str(date(today.year, today.month, today.day))
+	for snapshot in all_snapshots:
+			if snapshot['id'] in snapshot_ids:
+				new_disk_name = snapshot['sourceDisk'].split('/')[-1] + '_' + \
+						today_as_str + 'snapshot'
+				backup_logger.info("Creating disk with name %s from snapshot %s", new_disk_name, snapshot['name'])
+				__create_disk_from_snapshot(compute, new_disk_name, snapshot['selfLink'], options.project_id, options.project_zone)
 
 
 def delete_disk(compute, project, zone, disk_name):
@@ -140,6 +137,20 @@ def delete_snapshot(compute, project, snapshot_name):
 	return result
 
 
+def replace_pv_with_snapshot_disk(pv_name, disk_name):
+	""" Takes in PV_NAME and replaces the underlying GCE Persistent disk
+	with the specified snapshot disk name"""
+	backup_logger.debug("Replacing pv: %s disk with new disk %s" % (pv_name, disk_name))
+	cmd = ['kubectl', 'patch', 'pv', pv_name, '-p', \
+		'{"spec":{"gcePersistentDisk":{"pdName":"%s"}}}"' % disk_name]
+	p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+	output, err = p.communicate()
+	if err:
+		backup_logger.error("Could not patch PV %s with new GCE disk %s" % (pv_name, disk_name))
+		sys.exit(1)
+	return output, err
+
+
 def __days_between_now_and_last_backup(date_string):
 	""" Takes in DATE_STRING, formed like %Y-%M-%D such
 	as 2017-03-04 and returns how many days there are between
@@ -153,18 +164,20 @@ def __days_between_now_and_last_backup(date_string):
 	return delta.days
 
 
-def replace_pv_with_snapshot_disk(pv_name, disk_name):
-	""" Takes in PV_NAME and replaces the underlying GCE Persistent disk
-	with the specified snapshot disk name"""
-	backup_logger.debug("Replacing pv: %s disk with new disk %s" % (pv_name, disk_name))
-	cmd = ['kubectl', 'patch', 'pv', pv_name, '-p', \
-		'{"spec":{"gcePersistentDisk":{"pdName":"%s"}}}"' % disk_name]
-	p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
-	output, err = p.communicate()
-	if err:
-		backup_logger.error("Could not patch PV %s with new GCE disk %s" % (pv_name, disk_name))
+def __create_disk_from_snapshot(compute, new_disk_name, snapshot_url, project, zone):
+	""" Creates a new disk with NEW_DISK_NAME from the supplied SNAPSHOT_URL """
+	request_body = {
+		"kind" : "compute#disk",
+		"name" : new_disk_name,
+		"sourceSnapshot" : snapshot_url
+	}
+	try:
+		backup_logger.debug("Creating new disk from snapshot url %s", snapshot_url)
+		result = compute.disks().insert(project=project, zone=zone, body=request_body).execute()
+	except HttpError:
+		backup_logger.error("Error with HTTP Request made to create disk from snapshot")
 		sys.exit(1)
-	return output, err
+	return result
 
 
 if __name__ == "__main__":
@@ -197,14 +210,23 @@ if __name__ == "__main__":
 		filtered_disks = filter_disks_by_name(all_disks, k8s.get_filtered_disk_names(args.backup))
 		backup_logger.info("Filtered %d disks out of %d total that are eligible for snapshotting",
 							len(filtered_disks), len(all_disks))
+
+		snapshot_ids = []
+
 		for disk in filtered_disks:
 			request_body = {
 				"kind" : "compute#snapshot",
 				"name" : disk['name'],
 				"id"   : disk['id']
 			}
+			backup_logger.info("Creating snapshot of disk %s", disk['name'])
 			if not args.test:
-				create_snapshot_of_disk(compute, disk['name'], options.project_id, options.project_zone, request_body)
+				result = create_snapshot_of_disk(compute, disk['name'], options.project_id, options.project_zone, request_body)
+				snapshot_ids.append(result['id'])
+
+		backup_logger.info("Refreshing list of snapshots to create new disks")
+		all_snapshots = list_snapshots(compute, options.project_id)
+		create_disks_from_snapshot_ids(all_snapshots, snapshot_ids, compute, options)
 
 	# Delete all snapshots older than the specified number of days
 	if args.delete:
@@ -212,11 +234,13 @@ if __name__ == "__main__":
 		backup_logger.info("Filtered %d snapshots out of %d total that are eligible for deletion",
 						len(snapshots_to_delete), len(all_snapshots))
 		for snapshot in snapshots_to_delete:
+			backup_logger.info("Deleting snapshot %s", snapshot['name'])
 			if not args.test:
 				delete_snapshot(compute, options.project_id, snapshot['name'])
 
 	# Replace a pre-existing PV's underlying GCE disk with a new one
 	if args.replace:
 		pv_name, new_disk_name = args.replace
+		backup_logger.info("Replacing %s persistent volume with new disk %s", pv_name, new_disk_name)
 		if not args.test:
 			replace_pv_with_snapshot_disk(pv_name, new_disk_name)
