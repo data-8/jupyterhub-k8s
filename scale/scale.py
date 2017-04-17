@@ -19,6 +19,7 @@ from slack_message import slack_handler
 logging.basicConfig(
     format='%(asctime)s %(levelname)s %(message)s')
 scale_logger = logging.getLogger("scale")
+slack_logger = logging.getLogger("slack")  # used for slack message only
 
 
 def shutdown_empty_nodes(nodes, k8s, cluster, test=False):
@@ -28,13 +29,18 @@ def shutdown_empty_nodes(nodes, k8s, cluster, test=False):
 
     CRITICAL NODES SHOULD NEVER BE INCLUDED IN THE INPUT LIST
     """
+    count = 0
     for node in nodes:
         if k8s.get_pods_number_on_node(node) == 0 and node.spec.unschedulable:
             if confirm(("Shutting down empty node: %s" % node.metadata.name)):
                 scale_logger.info(
                     "Shutting down empty node: %s", node.metadata.name)
                 if not test:
+                    count += 1
                     cluster.shutdown_specified_node(node.metadata.name)
+    if count > 0:
+        scale_logger.info("Shut down %d empty nodes", count)
+        slack_logger.info("Shut down %d empty nodes", count)
 
 
 def shutdown_empty_nodes_test(nodes, k8s, cluster):
@@ -72,9 +78,10 @@ def scale(options):
     else:
         k8s = k8s_control(options)
 
+    slack_logger.addHandler(slack_handler(options.slack_token))
     if not options.slack_token:
         scale_logger.info(
-            "No message will be sent to slack since there is no token provided")
+            "No message will be sent to slack, since there is no token provided")
 
     scale_logger.info("Scaling on cluster %s", k8s.get_cluster_name())
 
@@ -98,14 +105,14 @@ def scale(options):
                       len(k8s.nodes) - len(nodes))
     scale_logger.info("Recommending total %i nodes for service", goal)
 
-    scale_logger.addHandler(slack_handler(options.slack_token))
-
     if confirm(("Updating unschedulable flags to ensure %i nodes are unschedulable" % max(len(k8s.nodes) - goal, 0))):
         update_unschedulable(max(len(k8s.nodes) - goal, 0), nodes, k8s)
 
     if goal > len(k8s.nodes):
         scale_logger.info(
             "Resize the cluster to %i nodes to satisfy the demand", goal)
+        slack_logger.info(
+            "Cluster resized to %i nodes to satisfy the demand", goal)
         if options.test_cloud:
             resize_for_new_nodes_test(goal, k8s, cluster)
         else:

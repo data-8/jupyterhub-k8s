@@ -6,6 +6,7 @@ import heapq
 import logging
 
 scale_logger = logging.getLogger("scale")
+slack_logger = logging.getLogger("slack")  # used for slack message only
 
 
 def __update_nodes(k8s, nodes, unschedulable):
@@ -40,7 +41,7 @@ def update_unschedulable(number_unschedulable, nodes, k8s, calculate_priority=No
 
     if calculate_priority == None:
         # Default implementation based on get_pods_number_on_node
-        calculate_priority = lambda node: k8s.get_pods_number_on_node(node)
+        def calculate_priority(node): return k8s.get_pods_number_on_node(node)
 
     schedulable_nodes = []
     unschedulable_nodes = []
@@ -76,5 +77,8 @@ def update_unschedulable(number_unschedulable, nodes, k8s, calculate_priority=No
     scale_logger.debug("%i nodes newly blocked", len(toBlock))
     __update_nodes(k8s, toUnBlock, False)
     scale_logger.debug("%i nodes newly unblocked", len(toUnBlock))
+    if len(toBlock) != 0 or len(toUnBlock) != 0:
+        slack_logger.info(
+            "%i nodes newly blocked, %i nodes newly blocked", len(toBlock), len(toUnBlock))
 
     return len(toBlock) - len(toUnBlock)
