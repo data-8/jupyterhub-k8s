@@ -108,9 +108,9 @@ def create_disks_from_snapshot_ids(all_snapshots, snapshot_ids, compute, options
 	today = datetime.datetime.now()
 	today_as_str = str(date(today.year, today.month, today.day))
 	for snapshot in all_snapshots:
-			if snapshot['id'] in snapshot_ids:
-				new_disk_name = snapshot['sourceDisk'].split('/')[-1] + '_' + \
-						today_as_str + 'snapshot'
+			if snapshot['sourceDiskId'] in snapshot_ids:
+				new_disk_name = snapshot['sourceDisk'].split('/')[-1] + '-' + \
+						today_as_str + '-snapshot'
 				backup_logger.info("Creating disk with name %s from snapshot %s", new_disk_name, snapshot['name'])
 				__create_disk_from_snapshot(compute, new_disk_name, snapshot['selfLink'], options.project_id, options.project_zone)
 
@@ -222,7 +222,7 @@ if __name__ == "__main__":
 			backup_logger.info("Creating snapshot of disk %s", disk['name'])
 			if not args.test:
 				result = create_snapshot_of_disk(compute, disk['name'], options.project_id, options.project_zone, request_body)
-				snapshot_ids.append(result['id'])
+				snapshot_ids.append(result['targetId'])
 
 		backup_logger.info("Refreshing list of snapshots to create new disks")
 		all_snapshots = list_snapshots(compute, options.project_id)
