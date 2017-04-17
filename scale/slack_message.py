@@ -8,7 +8,7 @@ import logging
 
 class slack_handler(logging.Handler):
 
-    def __init__(self, token, channel="C48QN9GHK", username="autoscaler"):
+    def __init__(self, token, channel="C3KJJMFKP", username="autoscaler"):
         logging.Handler.__init__(self, level=logging.INFO)
         self.token = token
         self.channel = channel

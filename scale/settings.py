@@ -15,8 +15,8 @@ class settings:
         self.min_utilization = float(os.environ.get("MIN_UTILIZATION", 0.65))
         self.optimal_utilization = float(
             os.environ.get("OPTIMAL_UTILIZATION", 0.75))
-        self.min_nodes = int(os.environ.get("MIN_NODES", 3))
-        self.max_nodes = int(os.environ.get("MAX_NODES", 35))
+        self.min_nodes = int(os.environ.get("MIN_NODES", 15))
+        self.max_nodes = int(os.environ.get("MAX_NODES", 50))
 
         # TODO: Get rid of these default values specific to Data8
         self.zone = os.environ.get("ZONE", "us-central1-a")
