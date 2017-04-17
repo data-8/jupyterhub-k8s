@@ -22,6 +22,8 @@ class k8s_control:
 
     self.pods omits certain pods based on settings"""
 
+    test = False
+
     def __init__(self, options):
         """ Needs to be initialized with options as an
         instance of settings"""

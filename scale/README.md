@@ -1,6 +1,8 @@
 JupyterHub Kubernetes Autoscaler
 ===================================
 
+This autoscaler is created to scale the cluster used to serve the stateful Jupyter notebook web application. It is designed to cause no disruption to user and (in the future) support various cloud service providers.
+
 ### Settings
 
 Settings for the autoscaler should be loaded through environment variables. They are defined as follows:
@@ -20,7 +22,7 @@ Settings for the autoscaler should be loaded through environment variables. They
 
 **Workload** =  The sum of memory requests of pods that are not omitted.
 
-**Capacity** = Total memeory of the cluster
+**Capacity** = Total meory of the cluster
 
 **Utilization** = On certain nodes, the ratio between the sum of `Workload` and the sum of `Capacity`
 
@@ -29,15 +31,15 @@ Settings for the autoscaler should be loaded through environment variables. They
 When `scale.py` is exected
 
 1. The autoscaler will calculate the **Utilization** of the cluster.
-2. If the **Utilization** of the cluster is between a **predefined minimum** and a **predefined maximum**, move the `Unschedulable` flag provided by Kubernetes between nodes, to make them deleted as soon as possible. Otherwise, the autoscaler will add or remove `Unschedulable` flags to approximate a **predefined optimal utilization**; if optimal utilization is not reached, new nodes can be created to meet the goal, to the predefined **maximum number of nodes**.
+2. If the **Utilization** of the cluster is between a **predefined minimum** and a **predefined maximum**, move the `Unschedulable` flag provided by Kubernetes between nodes, to delete them as soon as possible. Otherwise, the autoscaler will add or remove `Unschedulable` flags to approximate a **predefined optimal utilization**; if optimal utilization is not reached, new nodes can be created to meet the goal, to the predefined **maximum number of nodes**.
 **2a. Nodes running `critical pods` will never be marked unschedulable**.
-3. Make sure there are at least **predefined minimum number** of nodes schedulable by removing flags or add new nodes.
-4. Shutdown all empty and unschedulable nodes
+3. Make sure there are at least **predefined minimum number** of nodes schedulable by removing flags or adding new nodes.
+4. Shutdown all empty and unschedulable nodes.
 
 ### How to run
 
-0. Read `settings.py` to make sure you like the current settings.
-1. Run `scale.py`, a one-time scaling should happen, and the script will quit.
+1. Read `settings.py` to make sure you like the current settings.
+2. Run `scale.py`, a one-time scaling should happen, and the script will quit.
 
 ### Requirements
 
@@ -50,3 +52,11 @@ Necessary privilege or credentials.
 ### Supported Service Providers
 
 Only Google Cloud Platform is supported for booting and shutting down nodes for now.
+
+### Cal Blueprint
+
+![bp](https://cloud.githubusercontent.com/assets/2468904/11998649/8a12f970-aa5d-11e5-8dab-7eef0766c793.png "BP Banner")
+
+This project was worked on in close collaboration with
+**[Cal Blueprint](http://www.calblueprint.org/)**.
+Cal Blueprint is a student-run UC Berkeley organization devoted to matching the skills of its members to our desire to see social good enacted in our community. Each semester, teams of 4-5 students work closely with a non-profit to bring technological solutions to the problems they face every day.

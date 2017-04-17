@@ -4,18 +4,23 @@
 
 import logging
 import argparse
+import random
+import time
 
 from workload import schedule_goal
 from update_nodes import update_unschedulable
 from cluster_update import gce_cluster_control
 from settings import settings
-from utils import user_confirm, populate_pods
+from utils import user_confirm
 from kubernetes_control import k8s_control
 from kubernetes_control_test import k8s_control_test
+from slack_message import slack_handler
+from populate import populate
 
 logging.basicConfig(
     format='%(asctime)s %(levelname)s %(message)s')
 scale_logger = logging.getLogger("scale")
+slack_logger = logging.getLogger("slack")  # used for slack message only
 
 
 def shutdown_empty_nodes(nodes, k8s, cluster, test=False):
@@ -25,13 +30,18 @@ def shutdown_empty_nodes(nodes, k8s, cluster, test=False):
 
     CRITICAL NODES SHOULD NEVER BE INCLUDED IN THE INPUT LIST
     """
+    count = 0
     for node in nodes:
         if k8s.get_pods_number_on_node(node) == 0 and node.spec.unschedulable:
             if confirm(("Shutting down empty node: %s" % node.metadata.name)):
                 scale_logger.info(
                     "Shutting down empty node: %s", node.metadata.name)
                 if not test:
+                    count += 1
                     cluster.shutdown_specified_node(node.metadata.name)
+    if count > 0:
+        scale_logger.info("Shut down %d empty nodes", count)
+        slack_logger.info("Shut down %d empty nodes", count)
 
 
 def shutdown_empty_nodes_test(nodes, k8s, cluster):
@@ -45,9 +55,11 @@ def resize_for_new_nodes(new_total_nodes, k8s, cluster, test=False):
         scale_logger.info("Resizing up to: %d nodes", new_total_nodes)
         if not test:
             cluster.add_new_node(new_total_nodes)
-            scale_logger.info("Populate images to new nodes")
-            for image_url in k8s.image_urls:
-                populate_pods(k8s.context, image_url)
+            wait_time = 130
+            scale_logger.debug(
+                "Sleeping for %i seconds for the node to be ready for populating", wait_time)
+            time.sleep(wait_time)
+            populate(k8s)
 
 
 def resize_for_new_nodes_test(new_total_nodes, k8s, cluster):
@@ -65,12 +77,22 @@ def scale(options):
     else:
         k8s = k8s_control(options)
 
+    slack_logger.addHandler(slack_handler(options.slack_token))
+    if not options.slack_token:
+        scale_logger.info(
+            "No message will be sent to slack, since there is no token provided")
+
     scale_logger.info("Scaling on cluster %s", k8s.get_cluster_name())
 
     nodes = []  # a list of nodes that are NOT critical
     for node in k8s.nodes:
         if node.metadata.name not in k8s.critical_node_names:
             nodes.append(node)
+
+    # Shuffle the node list so that when there are multiple nodes
+    # with same number of pods, they will be randomly picked to
+    # be made unschedulable
+    random.shuffle(nodes)
 
     # goal is the total number of nodes we want in the cluster
     goal = schedule_goal(k8s, options)
@@ -91,12 +113,15 @@ def scale(options):
         if options.test_cloud:
             resize_for_new_nodes_test(goal, k8s, cluster)
         else:
+            slack_logger.info(
+                "Cluster resized to %i nodes to satisfy the demand", goal)
             resize_for_new_nodes(goal, k8s, cluster)
     if options.test_cloud:
         shutdown_empty_nodes_test(nodes, k8s, cluster)
     else:
         # CRITICAL NODES SHOULD NOT BE SHUTDOWN
         shutdown_empty_nodes(nodes, k8s, cluster)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -119,6 +144,8 @@ if __name__ == "__main__":
         scale_logger.setLevel(logging.DEBUG)
     else:
         scale_logger.setLevel(logging.INFO)
+
+    slack_logger.setLevel(logging.INFO)
 
     # Retrieve settings from the environment
     options = settings()
@@ -148,5 +175,7 @@ if __name__ == "__main__":
         options.context_cloud = args.context_for_cloud
     else:
         options.context_cloud = options.context
-
-    scale(options)
+    try:
+        scale(options)
+    except KeyboardInterrupt:
+        pass

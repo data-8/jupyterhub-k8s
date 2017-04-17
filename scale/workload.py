@@ -43,8 +43,8 @@ def schedule_goal(k8s, options):
 
         minimum_nodes = options.min_nodes
         maximum_nodes = options.max_nodes
-        # Ensure that newClusterSize remains within the bounds of min and max
+        # Ensure that new_cluster_size remains within the bounds of min and max
         # nodes
-        newClusterSize = minimum_nodes if required_num < minimum_nodes else required_num
-        newClusterSize = maximum_nodes if required_num > maximum_nodes else required_num
-        return int(round(newClusterSize))
+        new_cluster_size = minimum_nodes if required_num < minimum_nodes else required_num
+        new_cluster_size = maximum_nodes if required_num > maximum_nodes else new_cluster_size
+        return int(round(new_cluster_size))
