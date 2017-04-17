@@ -20,7 +20,7 @@ class slack_handler(logging.Handler):
                 "https://slack.com/api/chat.postMessage?token=%s&channel=%s&text=%s&username=%s&as_user=true" % (
                     self.token,
                     self.channel,
-                    text,
+                    "Cluster autoscaler: " + text,
                     self.username
                 ))
 
