@@ -10,3 +10,4 @@ def populate(k8s):
     scale_logger.debug("Populate images to new or newly schedulable nodes")
     for image_url in k8s.image_urls:
         populate_pods(k8s.context, image_url)
+    scale_logger.debug("Populate finished")
