@@ -11,10 +11,11 @@ from workload import schedule_goal
 from update_nodes import update_unschedulable
 from cluster_update import gce_cluster_control
 from settings import settings
-from utils import user_confirm, populate_pods
+from utils import user_confirm
 from kubernetes_control import k8s_control
 from kubernetes_control_test import k8s_control_test
 from slack_message import slack_handler
+from populate import populate
 
 logging.basicConfig(
     format='%(asctime)s %(levelname)s %(message)s')
@@ -63,13 +64,6 @@ def resize_for_new_nodes(new_total_nodes, k8s, cluster, test=False):
 
 def resize_for_new_nodes_test(new_total_nodes, k8s, cluster):
     resize_for_new_nodes(new_total_nodes, k8s, cluster, True)
-
-
-def populate(k8s):
-    # FIXME: Remove all calls to this function after auto-pulling images
-    scale_logger.debug("Populate images to new or newly schedulable nodes")
-    for image_url in k8s.image_urls:
-        populate_pods(k8s.context, image_url)
 
 
 def scale(options):

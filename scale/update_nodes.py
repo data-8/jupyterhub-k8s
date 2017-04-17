@@ -5,7 +5,7 @@
 import heapq
 import logging
 
-from scale import populate
+from populate import populate
 
 scale_logger = logging.getLogger("scale")
 slack_logger = logging.getLogger("slack")  # used for slack message only
