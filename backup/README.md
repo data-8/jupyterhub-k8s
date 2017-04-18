@@ -1,4 +1,4 @@
-Google Cloud Autobackups
+Google Cloud Disk Autobackup
 ===================================
 ### General
 This script was created for Data 8 to automate the creation of backup snapshots for each existing Google Cloud persistent disk that underlies student notebooks. This script is mindful of Kubernetes, and can be run at user expected times to ensure redundancy of data. 
@@ -34,6 +34,7 @@ Please be mindful of the command line arguments required to run this script. The
 `-v`, `--verbose` - Whether or not `debug` level logs should be shown
 
 An example of a few correct ways to run this script might be:
+
 `python3 backup-disks.py --cluster prod --backup datahub --delete 3 --verbose --test`
 
 `python3 backup-disks.py --cluster dev --backup datahub-dev --create-disk`
