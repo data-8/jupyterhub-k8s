@@ -3,6 +3,7 @@
 """ Primary Backup Logic"""
 import json
 import sys
+import time
 import datetime
 import logging
 import argparse
@@ -17,6 +18,7 @@ from oauth2client.client import GoogleCredentials
 from json.decoder import JSONDecodeError as JsonError
 
 SNAPSHOT_DATESTRING_LEN = 10
+DEFAULT_LOG_UPDATE_TIME = 10
 
 logging.basicConfig(
 	format='%(asctime)s %(levelname)s %(message)s')
@@ -91,6 +93,19 @@ def filter_snapshots_by_time(snapshots, retention_period):
 	return old_snapshots
 
 
+def filter_snapshots_by_id(snapshots, snapshot_ids):
+	""" Takes in SNAPSHOT_IDS, a list of IDs corresponding to disks 
+	of which snapshots have been made, and filters SNAPSHOTS until
+	only those with corresponding IDs remain """
+	try:
+		snapshots_by_ids = list(filter(lambda snapshot: \
+			snapshot['sourceDiskId'] in snapshot_ids, snapshots))
+	except Exception:
+		backup_logger.error("Failed to filter snapshots by snapshot_ids")
+		sys.exit(1)
+	return snapshots_by_ids
+
+
 def create_snapshot_of_disk(compute, disk_name, project, zone, body):
 	""" Creates a snapshot of the provided disk """
 	backup_logger.debug("Creating snapshot for disk %s", disk_name)
@@ -102,26 +117,18 @@ def create_snapshot_of_disk(compute, disk_name, project, zone, body):
 	return result
 
 
-def create_disks_from_snapshot_ids(all_snapshots, snapshot_ids, compute, options):
-	""" Takes in a refreshed ALL_SNAPSHOTS, compares all of them to gather a list of snapshots
-	recently created and ready to be formated into a disk, and creates those disks """
-	today = datetime.datetime.now()
-	today_as_str = str(date(today.year, today.month, today.day))
-	for snapshot in all_snapshots:
-			if snapshot['sourceDiskId'] in snapshot_ids:
-				new_disk_name = snapshot['sourceDisk'].split('/')[-1] + '-' + \
-						today_as_str + '-snapshot'
-				backup_logger.info("Creating disk with name %s from snapshot %s", new_disk_name, snapshot['name'])
-				__create_disk_from_snapshot(compute, new_disk_name, snapshot['selfLink'], options.project_id, options.project_zone)
-
-
-def delete_disk(compute, project, zone, disk_name):
-	""" Deletes the disk specified with DISK_NAME """
-	backup_logger.debug("Deleting disk %s", disk_name)
+def create_disk_from_snapshot(compute, new_disk_name, snapshot_url, project, zone):
+	""" Creates a new disk with NEW_DISK_NAME from the supplied SNAPSHOT_URL """
+	request_body = {
+		"kind" : "compute#disk",
+		"name" : new_disk_name,
+		"sourceSnapshot" : snapshot_url
+	}
 	try:
-		result = compute.disks().delete(disk=disk_name, project=project, zone=zone).execute()
+		backup_logger.debug("Creating new disk with name %s from snapshot url %s", new_disk_name, snapshot_url)
+		result = compute.disks().insert(project=project, zone=zone, body=request_body).execute()
 	except HttpError:
-		backup_logger.error("Error with HTTP Request made to delete disk")
+		backup_logger.error("Error with HTTP Request made to create disk from snapshot")
 		sys.exit(1)
 	return result
 
@@ -164,38 +171,31 @@ def __days_between_now_and_last_backup(date_string):
 	return delta.days
 
 
-def __create_disk_from_snapshot(compute, new_disk_name, snapshot_url, project, zone):
-	""" Creates a new disk with NEW_DISK_NAME from the supplied SNAPSHOT_URL """
-	request_body = {
-		"kind" : "compute#disk",
-		"name" : new_disk_name,
-		"sourceSnapshot" : snapshot_url
-	}
-	try:
-		backup_logger.debug("Creating new disk from snapshot url %s", snapshot_url)
-		result = compute.disks().insert(project=project, zone=zone, body=request_body).execute()
-	except HttpError:
-		backup_logger.error("Error with HTTP Request made to create disk from snapshot")
-		sys.exit(1)
-	return result
-
-
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser()
 	parser.add_argument(
-		"-c", "--cluster", required=True, help="Specify the cluster for which this script is to run on")
+		"-c", "--cluster", help="Specify the cluster for which this script is to run on", required=True)
 	parser.add_argument(
 		"-b", "--backup", help="Specify a namespace to backup within the designated cluster")
 	parser.add_argument(
+		"-n" "--create-disk", help="Automatically creates disks from recently created snapshots", action="store_true")
+	parser.add_argument(
 		"-d", "--delete", help="Specify the lifespan of a snapshot (in days) before eligible for deletion")
 	parser.add_argument(
-		"-r", "--replace", nargs=2, help="Specify the persistent volume name and the new GCE PD disk to insert")
+		"-r", "--replace", help="Specify the persistent volume name and the new GCE PD disk to insert", nargs=2)
 	parser.add_argument(
-		"-t", "--test", help="Runs script in test mode, no real actions will be taken on your cluster", action="store_true")
+		"-v" "--verbose", help="Show verbose output (debug)", action="store_true")
+	parser.add_argument(
+		"-t", "--test", help="Runs script in test mode; no real actions will be taken on your cluster", action="store_true")
 	args = parser.parse_args()
+	backup_logger.setLevel(logging.INFO)
 
 	# Instantiate objects, credentials, and clients
-	backup_logger.setLevel(logging.DEBUG)
+	if args.verbose:
+		backup_logger.setLevel(logging.DEBUG)
+	else:
+		backup_logger.setLevel(logging.INFO)
+
 	options = settings()
 	k8s = k8s_control(args.cluster)
 	credentials = GoogleCredentials.get_application_default()
@@ -212,6 +212,9 @@ if __name__ == "__main__":
 							len(filtered_disks), len(all_disks))
 
 		snapshot_ids = []
+		completed_snapshots = 0
+		start_time = time.time()
+		previous_log_time = time.time()
 
 		for disk in filtered_disks:
 			request_body = {
@@ -219,24 +222,62 @@ if __name__ == "__main__":
 				"name" : disk['name'],
 				"id"   : disk['id']
 			}
-			backup_logger.info("Creating snapshot of disk %s", disk['name'])
+			curr_iteration_time = time.time()
+			if curr_iteration_time - previous_log_time > DEFAULT_LOG_UPDATE_TIME:
+				previous_log_time = curr_iteration_time
+				backup_logger.info("%f seconds elapsed with %d out of %d disks successfully snapshotted", \
+						curr_iteration_time - start_time, completed_snapshots, len(filtered_disks))
+
 			if not args.test:
 				result = create_snapshot_of_disk(compute, disk['name'], options.project_id, options.project_zone, request_body)
+				completed_snapshots += 1
 				snapshot_ids.append(result['targetId'])
 
-		backup_logger.info("Refreshing list of snapshots to create new disks")
-		all_snapshots = list_snapshots(compute, options.project_id)
-		create_disks_from_snapshot_ids(all_snapshots, snapshot_ids, compute, options)
+		if args.create_disk:
+			backup_logger.info("Refreshing list of snapshots to create new disks")
+			all_snapshots = list_snapshots(compute, options.project_id)
+			filtered_snapshots_by_id = filter_snapshots_by_id(all_snapshots, snapshot_ids)
+			backup_logger.info("Creating disks from %d new snapshots", len(filtered_snapshots_by_id))
+			today = datetime.datetimenow()
+			today_as_str = str(date(today.year, today.month, today.day))
+
+			completed_disks = 0
+			start_time = time.time()
+			previous_log_time = time.time()
+
+			for snapshot in filtered_snapshots_by_id:
+				curr_iteration_time = time.time()
+				if curr_iteration_time - previous_log_time > DEFAULT_LOG_UPDATE_TIME:
+					previous_log_time = curr_iteration_time
+					backup_logger.info("%f seconds elapsed with %d out of %d disks created from snapshots", \
+							curr_iteration_time - start_time, completed_disks, len(filtered_snapshots_by_id))
+				new_disk_name = snapshot['sourceDisk'].split('/')[-1] + '-' + \
+					today_as_str + '-snapshot'
+
+				if not args.test:
+					create_disk_from_snapshot(compute, new_disk_name, snapshot['selfLink'], options.project_id, options.project_zone)
+					completed_disks += 1
 
 	# Delete all snapshots older than the specified number of days
 	if args.delete:
 		snapshots_to_delete = filter_snapshots_by_time(all_snapshots, int(args.delete))
 		backup_logger.info("Filtered %d snapshots out of %d total that are eligible for deletion",
 						len(snapshots_to_delete), len(all_snapshots))
+
+		completed_snapshot_deletions = 0
+		start_time = time.time()
+		previous_log_time = time.time() 
+
 		for snapshot in snapshots_to_delete:
-			backup_logger.info("Deleting snapshot %s", snapshot['name'])
+			current_iteration_time = time.time()
+			if current_iteration_time - previous_log_time > DEFAULT_LOG_UPDATE_TIME:
+				previous_log_time = current_iteration_time
+				backup_logger.info("%f seconds elapsed with %d out of %d snapshots successfully deleted", \
+						curr_iteration_time - start_time, completed_snapshot_deletions, len(snapshots_to_delete))
+
 			if not args.test:
 				delete_snapshot(compute, options.project_id, snapshot['name'])
+				completed_snapshot_deletions += 1
 
 	# Replace a pre-existing PV's underlying GCE disk with a new one
 	if args.replace:
@@ -244,3 +285,5 @@ if __name__ == "__main__":
 		backup_logger.info("Replacing %s persistent volume with new disk %s", pv_name, new_disk_name)
 		if not args.test:
 			replace_pv_with_snapshot_disk(pv_name, new_disk_name)
+
+	backup_logger.info("Autobackup successful with supplied parameters")
