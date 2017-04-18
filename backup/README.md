@@ -20,16 +20,24 @@ Make sure you read `settings.py` first to look at default values for your cluste
 Please be mindful of the command line arguments required to run this script. The definitions are provided for you below:
 
 `-c`, `--cluster` - __REQUIRED__. The name of your cluster, such as `dev` or `prod` should follow this tag
+
 `-b`, `--backup` - Whether or not disk backups should be performed, followed by the namespace to filter on, such as `datahub`
+
 `--create-disk` - Whether or not to automatically create disks from all snapshots made via backup, no subsequent value required.
+
 `-d`, `--delete` - Whether or not snapshots will be deleted, and the number of days their lifespan should be at maximum
+
 `-r`, `--replace` - Whether or not a pre-existing Kubernetes PV should be patched with a newly created GCE disk. Requires __two__ arguments, the name of the Kubernetes PV and the name of the GCE disk
+
 `-t`, `--test` - Whether or not to run this script in a test mode, where logs will be shown but no real action will be taken to your cluster. No subsequent value provided.
+
 `-v`, `--verbose` - Whether or not `debug` level logs should be shown
 
 An example of a few correct ways to run this script might be:
 `python3 backup-disks.py --cluster prod --backup datahub --delete 3 --verbose --test`
+
 `python3 backup-disks.py --cluster dev --backup datahub-dev --create-disk`
+
 `python3 backup-disks.py --cluster prod --replace pvc-5cab5673-1987-11e7-88ce-42010a800027 example_snapshot_disk`
 
 ### Requirements
