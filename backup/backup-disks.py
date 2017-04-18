@@ -178,13 +178,13 @@ if __name__ == "__main__":
 	parser.add_argument(
 		"-b", "--backup", help="Specify a namespace to backup within the designated cluster")
 	parser.add_argument(
-		"-n" "--create-disk", help="Automatically creates disks from recently created snapshots", action="store_true")
+		"--create-disk", help="Automatically creates disks from recently created snapshots", action="store_true")
 	parser.add_argument(
 		"-d", "--delete", help="Specify the lifespan of a snapshot (in days) before eligible for deletion")
 	parser.add_argument(
 		"-r", "--replace", help="Specify the persistent volume name and the new GCE PD disk to insert", nargs=2)
 	parser.add_argument(
-		"-v" "--verbose", help="Show verbose output (debug)", action="store_true")
+        "-v", "--verbose", help="Show verbose output (debug)", action="store_true")
 	parser.add_argument(
 		"-t", "--test", help="Runs script in test mode; no real actions will be taken on your cluster", action="store_true")
 	args = parser.parse_args()
@@ -238,7 +238,7 @@ if __name__ == "__main__":
 			all_snapshots = list_snapshots(compute, options.project_id)
 			filtered_snapshots_by_id = filter_snapshots_by_id(all_snapshots, snapshot_ids)
 			backup_logger.info("Creating disks from %d new snapshots", len(filtered_snapshots_by_id))
-			today = datetime.datetimenow()
+			today = datetime.datetime.now()
 			today_as_str = str(date(today.year, today.month, today.day))
 
 			completed_disks = 0
