@@ -1,0 +1,3 @@
+google-api-python-client==1.6.2
+kubernetes==1.0.0b1
+websocket==0.2.1
