@@ -14,3 +14,5 @@ class settings:
 		self.project_id = os.environ.get("PROJECT_ID", "92948014362")
 		# The zone the project is hosted in 
 		self.project_zone = os.environ.get("ZONE", "us-central1-a")
+		# The slack token of the associated Slack Bot
+		self.slack_token = os.environ.get("SLACK_TOKEN", "")

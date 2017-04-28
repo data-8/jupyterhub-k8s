@@ -12,6 +12,7 @@ import subprocess
 from datetime import date
 from settings import settings
 from googleapiclient import discovery
+from slack_message import slack_handler
 from kubernetes_client import k8s_control
 from googleapiclient.errors import HttpError
 from oauth2client.client import GoogleCredentials
@@ -23,6 +24,7 @@ DEFAULT_LOG_UPDATE_TIME = 10
 logging.basicConfig(
 	format='%(asctime)s %(levelname)s %(message)s')
 backup_logger = logging.getLogger("backup")
+slack_logger = logging.getLogger("slack")
 logging.getLogger('googleapiclient.discovery_cache').setLevel(logging.ERROR)
 
 def list_disks(compute, project, zone):
@@ -189,6 +191,7 @@ if __name__ == "__main__":
 		"-t", "--test", help="Runs script in test mode; no real actions will be taken on your cluster", action="store_true")
 	args = parser.parse_args()
 	backup_logger.setLevel(logging.INFO)
+	slack_logger.setLevel(logging.INFO)
 
 	# Instantiate objects, credentials, and clients
 	if args.verbose:
@@ -200,6 +203,10 @@ if __name__ == "__main__":
 	k8s = k8s_control(args.cluster)
 	credentials = GoogleCredentials.get_application_default()
 	compute = discovery.build('compute', 'v1', credentials=credentials)
+
+	slack_logger.addHandler(slack_handler(options.slack_token))
+	if not options.slack_token:
+		backup_logger.info("No message will be sent to Slack, since there is no token provided")
 
 	# Filter and retrieve necessary items from Google Cloud
 	all_disks = list_disks(compute, options.project_id, options.project_zone)
@@ -233,6 +240,8 @@ if __name__ == "__main__":
 				completed_snapshots += 1
 				snapshot_ids.append(result['targetId'])
 
+		slack_logger.info("Created snapshots for %d disks", completed_snapshots)
+
 		if args.create_disk:
 			backup_logger.info("Refreshing list of snapshots to create new disks")
 			all_snapshots = list_snapshots(compute, options.project_id)
@@ -258,6 +267,8 @@ if __name__ == "__main__":
 					create_disk_from_snapshot(compute, new_disk_name, snapshot['selfLink'], options.project_id, options.project_zone)
 					completed_disks += 1
 
+			slack_logger.info("Created %d disks from premade snapshots", completed_disks)
+
 	# Delete all snapshots older than the specified number of days
 	if args.delete:
 		snapshots_to_delete = filter_snapshots_by_time(all_snapshots, int(args.delete))
@@ -279,11 +290,14 @@ if __name__ == "__main__":
 				delete_snapshot(compute, options.project_id, snapshot['name'])
 				completed_snapshot_deletions += 1
 
+		slack_logger.info("Deleted %d snapshots older than than %d days", completed_snapshot_deletions, int(args.delete))
+
 	# Replace a pre-existing PV's underlying GCE disk with a new one
 	if args.replace:
 		pv_name, new_disk_name = args.replace
 		backup_logger.info("Replacing %s persistent volume with new disk %s", pv_name, new_disk_name)
 		if not args.test:
 			replace_pv_with_snapshot_disk(pv_name, new_disk_name)
+			slack_logger.info("Replaced persistent volume: %s with new disk: %s", pv_name, new_disk_name)
 
 	backup_logger.info("Autobackup successful with supplied parameters")
