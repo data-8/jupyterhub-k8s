@@ -1,7 +1,10 @@
 #!/usr/bin/python
 
+# Requires libsqlite3-mod-impexp for sqlite/json feature.
+
 import os
 import socket
+import time
 import subprocess as sp
 
 import sqlite3
@@ -61,13 +64,12 @@ def wait_for_operation(compute, project, zone, operation):
 
 	if 'error' in result:
 		code = result['error']['errors'][0]['code']
-		msg  = result['error']['errors'][0]['message']
 		if code not in ['RESOURCE_ALREADY_EXISTS']:
-			raise(msg)
+			raise(result['error']['errors'][0]['message'])
 
 	return result
 
-def get_snapshot_id(service, project, zone, disk, snapshot):
+def create_snapshot(service, project, zone, disk, snapshot):
 	'''If necessary, create a snapshot of a disk from the snapshot name,
        and return the snapshot ID.'''
 
@@ -83,7 +85,13 @@ def get_snapshot_id(service, project, zone, disk, snapshot):
 
 	return snapshot_id
 
-def get_disk_link(service, project, zone, disk_name, snapshot_id):
+def delete_snapshot(service, project, snapshot):
+	'''Delete a snapshot.'''
+	request = service.snapshots().delete(project=project, snapshot=snapshot)
+	response = request.execute()
+	result = wait_for_operation(service, project, zone, response['name'])
+	
+def create_disk(service, project, zone, disk_name, snapshot_id):
 	'''If necessary, create an archive disk from the snapshot ID, 
 	   and return the link to the disk.'''
 
@@ -102,6 +110,12 @@ def get_disk_link(service, project, zone, disk_name, snapshot_id):
 
 	return disk_link
 	
+def delete_disk(service, project, zone, disk):
+	'''Delete a disk from the disk name.'''
+	request = service.disks().delete(project=project, zone=zone, disk=disk)
+	response = request.execute()
+	result = wait_for_operation(service, project, zone, response['name'])
+	
 def attach_disk(service, project, zone, instance, disk_link, device_name):
 	'''Attach the disk associated with the snapshot.'''
 
@@ -113,6 +127,24 @@ def attach_disk(service, project, zone, instance, disk_link, device_name):
 		instance=instance, body=body)
 	response = request.execute()
 	result = wait_for_operation(service, project, zone, response['name'])
+
+def detach_disk(service, project, zone, instance, device_name):
+	'''Detach the disk associated with the snapshot.'''
+	request = service.instances().detachDisk(project=project, zone=zone,
+		instance=instance, deviceName=device_name)
+	response = request.execute()
+	result = wait_for_operation(service, project, zone, response['name'])
+
+def mount_disk(mount_dir, block_device):
+	# Mount the disk
+	if not os.path.exists(mount_dir):
+		cmd = ['sudo', 'mkdir', mount_dir]
+		p = sp.run(cmd, stdout=sp.PIPE, stderr=sp.PIPE)
+		p.check_returncode()
+
+	cmd = ['sudo', 'mount', block_device, mount_dir]
+	p = sp.run(cmd, stdout=sp.PIPE, stderr=sp.PIPE)
+	p.check_returncode()
 
 def make_archive(ns, user, pd):
 	'''Archive user pvc to gcloud archive storage.
@@ -136,22 +168,16 @@ def make_archive(ns, user, pd):
 	url = 'https://storage.cloud.google.com/' + bucket_name + '/' + tar_file
 
 	# Create a snapshot of the disk
-	snapshot_id = get_snapshot_id(service, project, zone, pd, snapshot)
+	snapshot_id = create_snapshot(service, project, zone, pd, snapshot)
 
 	# Create an archive disk from the snapshot
-	disk_link = get_disk_link(service, project, zone, archive_name, snapshot_id)
+	disk_link = create_disk(service, project, zone, archive_disk, snapshot_id)
 	
 	# Attach archive disk
-	attach_disk(service, project, zone, instance, disk_link, device_name):
+	attach_disk(service, project, zone, instance, disk_link, device_name)
 
 	# Mount the disk
-	cmd = ['sudo', 'mkdir', mount_dir]
-	p = sp.run(cmd, stdout=sp.PIPE, stderr=sp.PIPE)
-	p.check_returncode()
-
-	cmd = ['sudo', 'mount', block_device, mount_dir]
-	p = sp.run(cmd, stdout=sp.PIPE, stderr=sp.PIPE)
-	p.check_returncode()
+	mount_disk(mount_dir, block_device)
 
 	# Create the tar file
 	tar_file_path = os.path.join(tarball_dir, tar_file)
@@ -170,14 +196,13 @@ def make_archive(ns, user, pd):
 	cmd = ['sudo', 'umount', mount_dir]
 
 	# Detach archive disk
-	# cmd = ['gcloud', 'compute', 'instances', 'detach-disk', 'instance',
-	# 	'--disk', archive_disk]
+	detach_disk(service, project, zone, instance, device_name)
 
 	# Delete archive disk
-	# cmd = ['gcloud', '-q', 'compute', 'disks', 'delete', archive_disk]
+	delete_disk(service, project, zone, archive_disk)
 
 	# Delete snapshot
-	# cmd = ['gcloud', '-q', 'compute', 'snapshots', 'delete', snapshot]
+	delete_snapshot(service, project, snapshot)
 
 	# Delete tar file
 	os.remove(tar_file_path)
@@ -204,17 +229,22 @@ if not os.path.isdir(tarball_dir):
 for line in fileinput.input():
 	els = line.split()
 
-	claim = els[0]
-	namespace = els[1]
+	namespace = els[0]
+	claim = els[1]
 	disk = els[2]
 
 	# if claim is not a user's, continue; dsep convention
 	if not claim.startswith('claim-'): continue
 
-	user = get_user_from_claim(namespace, claim)
+	try:
+		user = get_user_from_claim(namespace, claim)
+	except Exception as e:
+		print('E: Could not resolve user from claim: {} in {}'.format(
+			claim, namespace))
+		continue
 
 	# Skip blobs that already exist
 	if not archive_exists(bucket, user, namespace):
-		make_archive(user, namespace, disk)
+		make_archive(namespace, user, disk)
 
 # vim:set ts=4 sw=4 noet:
