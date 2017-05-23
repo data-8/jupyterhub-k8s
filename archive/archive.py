@@ -23,6 +23,7 @@ tarball_dir = "/var/tmp/archives"
 
 # gce values
 project = 'data-8'
+hosted_domain = 'berkeley.edu'
 zone = 'us-central1-a'
 bucket_name = "berkeley-dsep-2017-spring"
 
@@ -64,7 +65,6 @@ def wait_for_operation(compute, project, zone, operation):
 	'''Wait for a gcloud operation to complete and return its result.
        Raise an exception for any error unless it is for when try to create
 	   a resource that already exists.'''
-	print('wait_for_operation: ' + operation)
 	result = {}
 	while True:
 		time.sleep(1)
@@ -86,14 +86,13 @@ def wait_for_operation(compute, project, zone, operation):
 def create_snapshot(service, project, zone, disk, snapshot):
 	'''If necessary, create a snapshot of a disk from the snapshot name,
        and return the snapshot's URL.'''
-	print('create_snapshot')
+	print('  create_snapshot')
 	request = service.disks().createSnapshot(project=project, zone=zone,
 		disk=disk, body={'name':snapshot})
 	response = request.execute()
 	result = wait_for_operation(service, project, zone, response['name'])
 
 	# Get the snapshot ID
-	print('created snapshot. getting link')
 	request = service.snapshots().get(project=project, snapshot=snapshot)
 	response = request.execute()
 	snapshot_link = response['selfLink']
@@ -109,7 +108,7 @@ def snapshot_exists(service, project, snapshot):
 
 def delete_snapshot(service, project, snapshot):
 	'''Delete a snapshot.'''
-	print('delete_snapshot')
+	print('  delete_snapshot')
 	request = service.snapshots().delete(project=project, snapshot=snapshot)
 	response = request.execute()
 	result = wait_for_operation(service, project, zone, response['name'])
@@ -117,7 +116,7 @@ def delete_snapshot(service, project, snapshot):
 def create_disk(service, project, zone, disk_name, snapshot_link):
 	'''If necessary, create an archive disk from the snapshot ID, 
 	   and return the link to the disk.'''
-	print('create_disk')
+	print('  create_disk')
 	body = {
 		'name': disk_name,
 		'sourceSnapshot': snapshot_link,
@@ -142,14 +141,14 @@ def disk_exists(service, project, zone, disk):
 	
 def delete_disk(service, project, zone, disk):
 	'''Delete a disk from the disk name.'''
-	print('delete_disk')
+	print('  delete_disk')
 	request = service.disks().delete(project=project, zone=zone, disk=disk)
 	response = request.execute()
 	result = wait_for_operation(service, project, zone, response['name'])
 	
 def attach_disk(service, project, zone, instance, disk_link, device_name):
 	'''Attach the disk associated with the snapshot.'''
-	print('attach_disk')
+	print('  attach_disk')
 	body = {
 		'source': disk_link,
 		'deviceName': device_name,
@@ -178,7 +177,7 @@ def mount_disk(mount_dir, block_device):
 	p.check_returncode()
 
 def create_tar(path, source_dir):
-	print('create_tar')
+	print('  create_tar')
 	cmd = ['sudo', 'tar', 'czf', path, '-C', '/mnt/disks', source_dir]
 	p = sp.run(cmd, stdout=sp.PIPE, stderr=sp.PIPE)
 	p.check_returncode()
@@ -190,11 +189,8 @@ def make_archive(ns, user, pd):
 	    - pd: google persistend disk, e.g. gke-prod-long-uuid-looking-thing
 	'''
 
-	# extract user name from "claim-<user-name>-NNN"
-	email = user + '@berkeley.edu'
-
 	# name the things
-	ns_user = ns + '-' + user
+	ns_user = ns + '-' + user.replace('.', '---')
 	archive_name = ns_user
 	snapshot = 'snapshot-' + ns_user
 	disk_name = 'archive-disk-' + ns_user
@@ -211,7 +207,6 @@ def make_archive(ns, user, pd):
 		delete_snapshot(service, project, snapshot)
 
 	snapshot_link = create_snapshot(service, project, zone, pd, snapshot)
-	print('snapshot_link: ' + snapshot_link)
 
 	if disk_exists(service, project, zone, disk_name):
 		delete_disk(service, project, zone, disk_name)
@@ -223,18 +218,19 @@ def make_archive(ns, user, pd):
 	attach_disk(service, project, zone, instance, disk_link, device_name)
 
 	# Mount the disk
-	print('mount_disk')
+	print('  mount_disk')
 	mount_disk(mount_dir, block_device)
 
 	# Create the tar file
 	create_tar(path=tar_file_path, source_dir=disk_name)
 
 	# Upload the tarball to Google archival storage
-	print('upload')
+	print('  upload')
 	blob = bucket.blob(tar_file_name)
 	blob.upload_from_filename(filename=tar_file_path)
 
 	# Allow students to access their own bucket
+	email = user + '@' + hosted_domain
 	acl = blob.acl
 	acl.user(email).grant_read()
 	acl.save()
