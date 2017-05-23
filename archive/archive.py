@@ -190,7 +190,7 @@ def make_archive(ns, user, pd):
 	'''
 
 	# name the things
-	ns_user = ns + '-' + user.replace('.', '---')
+	ns_user = ns + '-' + user.replace('.', '---').replace('_', '---')
 	archive_name = ns_user
 	snapshot = 'snapshot-' + ns_user
 	disk_name = 'archive-disk-' + ns_user
