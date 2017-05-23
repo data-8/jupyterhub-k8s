@@ -7,4 +7,4 @@ Archive to GCloud
 
 2. Archive the volumes:
 
-`cat claims.tsv | archive.sh`
+`python archive.py claims.tsv`
