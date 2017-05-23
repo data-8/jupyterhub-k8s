@@ -160,13 +160,22 @@ def attach_disk(service, project, zone, instance, disk_link, device_name):
 
 def detach_disk(service, project, zone, instance, device_name):
 	'''Detach the disk associated with the snapshot.'''
+	print('  detach_disk')
 	request = service.instances().detachDisk(project=project, zone=zone,
 		instance=instance, deviceName=device_name)
 	response = request.execute()
 	result = wait_for_operation(service, project, zone, response['name'])
 
+def device_is_attached(service, project, zone, instance, device_name):
+	'''Check whether a disk's device is attached to the specified instance.'''
+	print('  check attached')
+	request = service.instances().get(project=project, zone=zone,
+		instance=instance)
+	response = request.execute()
+	return device_name in map(lambda x: x['deviceName'], response['disks'])
+
 def mount_disk(mount_dir, block_device):
-	# Mount the disk
+	print('  mount_disk')
 	if not os.path.exists(mount_dir):
 		cmd = ['sudo', 'mkdir', mount_dir]
 		p = sp.run(cmd, stdout=sp.PIPE, stderr=sp.PIPE)
@@ -178,7 +187,13 @@ def mount_disk(mount_dir, block_device):
 
 def create_tar(path, source_dir):
 	print('  create_tar')
-	cmd = ['sudo', 'tar', 'czf', path, '-C', '/mnt/disks', source_dir]
+	cmd = ['sudo', 'tar', 'czf', path, '-C', '/mnt/disks',
+		'--exclude=lost+found', source_dir]
+	p = sp.run(cmd, stdout=sp.PIPE, stderr=sp.PIPE)
+	p.check_returncode()
+
+def unmount(mount_dir):
+	cmd = ['sudo', 'umount', mount_dir]
 	p = sp.run(cmd, stdout=sp.PIPE, stderr=sp.PIPE)
 	p.check_returncode()
 
@@ -205,20 +220,22 @@ def make_archive(ns, user, pd):
 	# Create a snapshot of the disk
 	if snapshot_exists(service, project, snapshot):
 		delete_snapshot(service, project, snapshot)
-
 	snapshot_link = create_snapshot(service, project, zone, pd, snapshot)
 
-	if disk_exists(service, project, zone, disk_name):
-		delete_disk(service, project, zone, disk_name)
+	if device_is_attached(service, project, zone, instance, device_name):
+		detach_disk(service, project, zone, instance, device_name)
 
 	# Create an archive disk from the snapshot
+	if disk_exists(service, project, zone, disk_name):
+		delete_disk(service, project, zone, disk_name)
 	disk_link = create_disk(service, project, zone, disk_name, snapshot_link)
-	
+
 	# Attach archive disk
 	attach_disk(service, project, zone, instance, disk_link, device_name)
 
 	# Mount the disk
-	print('  mount_disk')
+	if os.path.ismount(mount_dir):
+		unmount(mount_dir)
 	mount_disk(mount_dir, block_device)
 
 	# Create the tar file
@@ -236,9 +253,7 @@ def make_archive(ns, user, pd):
 	acl.save()
 
 	# Unmount disk
-	cmd = ['sudo', 'umount', mount_dir]
-	p = sp.run(cmd, stdout=sp.PIPE, stderr=sp.PIPE)
-	p.check_returncode()
+	unmount(mount_dir)
 
 	# Detach archive disk
 	detach_disk(service, project, zone, instance, device_name)
