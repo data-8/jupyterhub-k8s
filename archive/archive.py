@@ -11,6 +11,7 @@ import subprocess as sp
 import time
 
 from gcloud import storage
+import gcloud.exceptions
 
 from googleapiclient import discovery
 from oauth2client.client import GoogleCredentials
@@ -168,7 +169,6 @@ def detach_disk(service, project, zone, instance, device_name):
 
 def device_is_attached(service, project, zone, instance, device_name):
 	'''Check whether a disk's device is attached to the specified instance.'''
-	print('  check attached')
 	request = service.instances().get(project=project, zone=zone,
 		instance=instance)
 	response = request.execute()
@@ -295,14 +295,20 @@ for line in fileinput.input():
 	try:
 		user = get_user_from_claim(namespace, claim)
 	except Exception as e:
-		print('E: Could not resolve user from claim: {} in {}'.format(
-			claim, namespace))
+		msg = 'Error: Could not resolve user from probably orphaned claim.'
+		je = { 'claim': claim, 'namespace': namespace, 'msg': msg }
+		print(json.dumps(je))
 		continue
 
 	# Skip blobs that already exist
 	if not archive_exists(bucket, user, namespace):
 		print('archiving: {}/{}'.format(namespace, user))
-		make_archive(namespace, user, disk)
+		try:
+			make_archive(namespace, user, disk)
+		except gcloud.exceptions.BadRequest as e:
+			je = { 'user': user, 'namespace': namespace, 'msg': str(e) }
+			print(json.dumps(je))
+			continue
 	else:
 		msg = 'bucket exists'
 		je = { 'user': user, 'namespace': namespace, 'msg': msg }
