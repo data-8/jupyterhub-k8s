@@ -74,7 +74,14 @@ def wait_for_operation(compute, project, zone, operation):
 
 		request = compute.zoneOperations().get(project=project,
 			zone=zone, operation=operation)
-		response = request.execute()
+
+		try:
+			response = request.execute()
+		except gcloud.exceptions.ServiceUnavailable as e:
+			print('Service unavailable. Retrying in 3s.')
+			time.sleep(3)
+			continue
+
 		if response['status'] == 'DONE': break
 
 	if 'error' in result:
@@ -205,10 +212,10 @@ def make_archive(ns, user, pd):
 	'''
 
 	# name the things
-	ns_user = ns + '-' + user.replace('.', '---').replace('_', '---')
+	ns_user = ns + '-' + user.replace('.', '---').replace('_', '---').replace('~', '---')
 	archive_name = ns_user
-	snapshot = 'snapshot-' + ns_user
-	disk_name = 'archive-disk-' + ns_user
+	snapshot = 'snapshot-' + ns_user + '-eof'
+	disk_name = 'archive-disk-' + ns_user + '-eof'
 	device_name = disk_name
 	mount_dir = '/mnt/disks/' + disk_name
 	block_device = '/dev/disk/by-id/google-' + disk_name
