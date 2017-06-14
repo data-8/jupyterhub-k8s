@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 # Requires libsqlite3-mod-impexp for json_extract function.
 
@@ -6,6 +6,7 @@ import fileinput
 import json
 import os
 import socket
+import smtplib
 import sqlite3
 import subprocess as sp
 import time
@@ -27,9 +28,34 @@ project = 'data-8'
 hosted_domain = 'berkeley.edu'
 zone = 'us-central1-a'
 bucket_name = "berkeley-dsep-2017-spring"
+SMTP_HOST = 'smtp.gmail.com'
+smtp_from = 'ds-instr@berkeley.edu'
+smtp_pass_file = '/home/ryan/.smtp_pass'
+smtp_pass = ''
+if os.path.exists(smtp_pass_file):
+	smtp_pass = open(smtp_pass_file).read().strip()
+tmpl_subject = 'JupyterHub files on {}'
+tmpl_body = '''We have archived your course files to Google Cloud. The JupyterHub server may become inaccessible before the next academic term begins. Please download your files using the link below. You will need to do so from a web browser where you are logged in to your Berkeley account.
+
+{}
+
+If you have any questions, contact ds-instr@berkeley.edu.''' 
 
 # sqlite db path template
 sqlite_tmpl = '/home/ryan/jupyterhub-{}.sqlite'
+
+def smtp_connect(smtp_user, smtp_pass):
+	server = smtplib.SMTP(SMTP_HOST, 587)
+	server.ehlo()
+	server.starttls()
+	server.login(smtp_user, smtp_pass)
+	return server
+
+def send_email(smtp_server, smtp_from, recipient, subject, body):
+	TO = recipient if type(recipient) is list else [recipient]
+	message = """From: %s\nTo: %s\nSubject: %s\n\n%s
+	""" % (smtp_from, ", ".join(TO), subject, body)
+	smtp_server.sendmail(smtp_from, TO, message)
 
 def get_user_from_claim(ns, claim):
 	'''Return the user's login given the claim name. We infer the pod name
@@ -46,6 +72,9 @@ def get_user_from_claim(ns, claim):
 	sql = 'select name from users where json_extract(state,"$.pod_name")=?'
 	c.execute(sql, (pod_name,))
 	return c.fetchone()[0]
+
+def email_from_user(user):
+	return user + '@' + hosted_domain
 
 def tar_file_tmpl(user, namespace):
 	return '{}-{}.tar.gz'.format(namespace, user)
@@ -204,6 +233,11 @@ def unmount(mount_dir):
 	p = sp.run(cmd, stdout=sp.PIPE, stderr=sp.PIPE)
 	p.check_returncode()
 
+def gen_url(user, ns):
+	tar_file_name = tar_file_tmpl(user, ns)
+	return 'https://storage.cloud.google.com/{}/{}'.format(
+		bucket_name, tar_file_name)
+
 def make_archive(ns, user, pd):
 	'''Archive user pvc to gcloud archive storage.
 	    - namespace: e.g. datahub, stat28, prob140
@@ -254,7 +288,7 @@ def make_archive(ns, user, pd):
 	blob.upload_from_filename(filename=tar_file_path)
 
 	# Allow students to access their own bucket
-	email = user + '@' + hosted_domain
+	email = email_from_user(user)
 	acl = blob.acl
 	acl.user(email).grant_read()
 	acl.save()
@@ -292,6 +326,8 @@ except gcloud.exceptions.NotFound:
 if not os.path.isdir(tarball_dir):
 	os.mkdir(tarball_dir)
 
+smtp_server = smtp_connect(smtp_from, smtp_pass)
+
 # Go through piped data
 for line in fileinput.input():
 	(namespace, claim, disk) = line.split()
@@ -318,8 +354,16 @@ for line in fileinput.input():
 			continue
 	else:
 		msg = 'bucket exists'
-		je = { 'user': user, 'namespace': namespace, 'msg': msg }
-		print(json.dumps(je))
+		print(json.dumps({ 'user': user, 'namespace': namespace, 'msg': msg }))
 		
+		# only email if their bucket is already up there
+		subject = tmpl_subject.format(namespace + '.berkeley.edu')
+		url = gen_url(user, namespace)
+		body = tmpl_body.format(url)
+		recipient = email_from_user(user)
+		#recipient = 'rylo@berkeley.edu'
+		send_email(smtp_server, smtp_from, recipient, subject, body)
+		print(json.dumps({'user':user,'namespace':namespace,'msg':'emailsent'}))
 
+smtp_server.quit()
 # vim:set ts=4 sw=4 noet:
